@@ -52,7 +52,38 @@ const DashboardPage = () => {
   useEffect(() => {
     checkAuthAndFetchLicenses();
     fetchLicenseStats();
+    handleUrlParams();
   }, []);
+
+  const handleUrlParams = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const successParam = urlParams.get('success');
+    const errorParam = urlParams.get('error');
+    const licensesAdded = urlParams.get('licenses_added');
+    const totalLicenses = urlParams.get('total_licenses');
+
+    if (successParam === 'purchase_complete' && licensesAdded) {
+      setSuccess(`🎉 Payment successful! Added ${licensesAdded} license${parseInt(licensesAdded) > 1 ? 's' : ''} to your account.`);
+      // Clear URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Refresh stats to show updated counts
+      setTimeout(() => {
+        fetchLicenseStats();
+        fetchLicenses();
+      }, 1000);
+    } else if (errorParam) {
+      const errorMessages: { [key: string]: string } = {
+        payment_failed: 'Payment was not successful. Please try again.',
+        invalid_license_count: 'Invalid license count received.',
+        admin_not_found: 'Admin account not found.',
+        update_failed: 'Failed to update license count. Please contact support.',
+        unexpected_error: 'An unexpected error occurred. Please try again.'
+      };
+      setError(errorMessages[errorParam] || 'An error occurred during payment processing.');
+      // Clear URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
 
   const checkAuthAndFetchLicenses = async () => {
     try {

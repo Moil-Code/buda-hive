@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
  * GET endpoint to handle payment gateway redirect
  * Called after successful payment from Stripe
  * Query params: licenseCount, payment, paymentType
+ * Redirects to dashboard after processing
  */
 export async function GET(request: Request) {
   try {
@@ -14,13 +15,17 @@ export async function GET(request: Request) {
     const payment = searchParams.get('payment');
     const paymentType = searchParams.get('paymentType');
 
+    console.log('Payment redirect received:', { licenseCount, payment, paymentType });
+
     // Validate payment was successful
     if (payment !== 'successful' || paymentType !== 'license_purchase') {
+      console.log('Payment validation failed');
       return NextResponse.redirect(new URL('/admin/dashboard?error=payment_failed', request.url));
     }
 
     const licenseCountNum = parseInt(licenseCount || '0', 10);
     if (isNaN(licenseCountNum) || licenseCountNum < 1) {
+      console.log('Invalid license count:', licenseCount);
       return NextResponse.redirect(new URL('/admin/dashboard?error=invalid_license_count', request.url));
     }
 
@@ -29,8 +34,11 @@ export async function GET(request: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.redirect(new URL('/login?error=unauthorized', request.url));
+      console.log('User not authenticated:', authError);
+      return NextResponse.redirect(new URL('/login?error=unauthorized&redirect=/admin/dashboard', request.url));
     }
+
+    console.log('Processing payment for user:', user.id);
 
     // Use service role key to update license count
     const supabaseAdmin = createSupabaseClient(
@@ -52,8 +60,11 @@ export async function GET(request: Request) {
       .single();
 
     if (adminError || !admin) {
+      console.log('Admin not found:', adminError);
       return NextResponse.redirect(new URL('/admin/dashboard?error=admin_not_found', request.url));
     }
+
+    console.log('Current license count:', admin.purchased_license_count);
 
     // Update the purchased license count
     const newLicenseCount = (admin.purchased_license_count || 0) + licenseCountNum;
@@ -68,8 +79,10 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL('/admin/dashboard?error=update_failed', request.url));
     }
 
+    console.log('License count updated successfully:', newLicenseCount);
+
     // Redirect to dashboard with success message
-    return NextResponse.redirect(new URL(`/admin/dashboard?success=purchase_complete&licenses_added=${licenseCountNum}`, request.url));
+    return NextResponse.redirect(new URL(`/admin/dashboard?success=purchase_complete&licenses_added=${licenseCountNum}&total_licenses=${newLicenseCount}`, request.url));
 
   } catch (error) {
     console.error('Payment processing error:', error);
