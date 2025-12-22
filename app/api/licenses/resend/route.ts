@@ -1,0 +1,92 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { sendLicenseActivationEmail } from '@/lib/email';
+
+export async function POST(request: Request) {
+  try {
+    const { licenseId } = await request.json();
+
+    if (!licenseId) {
+      return NextResponse.json(
+        { error: 'License ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = await createClient();
+
+    // Get current admin user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please login.' },
+        { status: 401 }
+      );
+    }
+
+    // Verify user is an admin
+    const { data: adminData, error: adminError } = await supabase
+      .from('admins')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (adminError || !adminData) {
+      return NextResponse.json(
+        { error: 'Access denied. Admin account required.' },
+        { status: 403 }
+      );
+    }
+
+    // Get the license
+    const { data: license, error: licenseError } = await supabase
+      .from('licenses')
+      .select('*')
+      .eq('id', licenseId)
+      .eq('admin_id', user.id)
+      .single();
+
+    if (licenseError || !license) {
+      return NextResponse.json(
+        { error: 'License not found' },
+        { status: 404 }
+      );
+    }
+
+    if (license.is_activated) {
+      return NextResponse.json(
+        { error: 'License is already activated' },
+        { status: 400 }
+      );
+    }
+
+    // Resend activation email with license ID for activation
+    const activationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/activate?licenseId=${license.id}`;
+    
+    const emailResult = await sendLicenseActivationEmail({
+      email: license.email,
+      activationUrl,
+      adminName: `${adminData.first_name} ${adminData.last_name}`,
+    });
+
+    if (!emailResult.success) {
+      console.error('Failed to resend activation email:', emailResult.error);
+      return NextResponse.json(
+        { error: 'Failed to send email' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: 'Activation email resent successfully' },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Resend email error:', error);
+    return NextResponse.json(
+      { error: 'An unexpected error occurred' },
+      { status: 500 }
+    );
+  }
+}
