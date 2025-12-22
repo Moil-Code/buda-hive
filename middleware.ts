@@ -35,17 +35,20 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Allow public access to external API endpoints
+  // Allow public access to external API endpoints and payment page
   const isPublicApiRoute = 
     request.nextUrl.pathname.startsWith('/api/licenses/verify') ||
     request.nextUrl.pathname.startsWith('/api/licenses/activate') ||
     request.nextUrl.pathname.startsWith('/api/licenses/purchase')
   
+  const isPaymentPage = request.nextUrl.pathname.startsWith('/payment')
+  
   if (
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/signup') &&
-    !isPublicApiRoute
+    !isPublicApiRoute &&
+    !isPaymentPage
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()

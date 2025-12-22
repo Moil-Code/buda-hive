@@ -277,7 +277,7 @@ const DashboardPage = () => {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-api-key': 'BUDA_HIVE_C6U3QMM4NZCnPQPLFbLEXdWW8IWaYVvz3'
+          'x-api-key': process.env.NEXT_PUBLIC_BUDA_API_KEY || '',
         },
         body: JSON.stringify({ 
           name: 'Buda Hive',
