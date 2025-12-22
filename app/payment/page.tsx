@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-const PaymentRedirectPage = () => {
+const PaymentRedirectContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -30,6 +30,24 @@ const PaymentRedirectPage = () => {
         <p className="text-gray-600">Please wait while we process your payment...</p>
       </div>
     </div>
+  );
+};
+
+const PaymentRedirectPage = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-[#1e293b] to-[#0f172a] flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl text-center">
+          <div className="w-16 h-16 mx-auto mb-6">
+            <div className="w-full h-full border-4 border-buda-blue border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Loading Payment</h1>
+          <p className="text-gray-600">Please wait...</p>
+        </div>
+      </div>
+    }>
+      <PaymentRedirectContent />
+    </Suspense>
   );
 };
 
