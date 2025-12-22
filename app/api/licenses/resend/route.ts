@@ -62,8 +62,8 @@ export async function POST(request: Request) {
     }
 
     // Resend activation email with license ID for activation
-    const activationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/activate?licenseId=${license.id}`;
-    
+    const activationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://business.moilapp.com'}?licenseId=${license.id}?ref=budaHive&org=buda-hive`;
+
     const emailResult = await sendLicenseActivationEmail({
       email: license.email,
       activationUrl,
