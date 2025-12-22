@@ -27,6 +27,8 @@ interface LicenseStats {
   available_licenses: number;
 }
 
+const LICENSE_PRESETS = [1, 5, 10, 15, 20];
+
 const DashboardPage = () => {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,8 +43,11 @@ const DashboardPage = () => {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const [licenseCount, setLicenseCount] = useState(1);
+  const [licenseCount, setLicenseCount] = useState(5);
+  const [customLicenseCount, setCustomLicenseCount] = useState('');
+  const [useCustomCount, setUseCustomCount] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
 
   useEffect(() => {
     checkAuthAndFetchLicenses();
@@ -70,6 +75,9 @@ const DashboardPage = () => {
         router.push('/login');
         return;
       }
+
+      // Store admin email for purchase
+      setAdminEmail(user.email || '');
 
       // User is authenticated and is an admin, fetch licenses
       await fetchLicenses();
@@ -254,7 +262,9 @@ const DashboardPage = () => {
   };
 
   const handlePurchaseLicenses = async () => {
-    if (licenseCount < 1) {
+    const finalCount = useCustomCount ? parseInt(customLicenseCount, 10) : licenseCount;
+    
+    if (!finalCount || finalCount < 1) {
       setError('Please enter a valid number of licenses');
       return;
     }
@@ -263,23 +273,31 @@ const DashboardPage = () => {
     setError('');
 
     try {
-      const response = await fetch('/api/licenses/purchase', {
+      const response = await fetch('https://moilapp.com/api/stripe/buy-licenses', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ licenseCount }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-api-key': 'BUDA_HIVE_C6U3QMM4NZCnPQPLFbLEXdWW8IWaYVvz3'
+        },
+        body: JSON.stringify({ 
+          name: 'Buda Hive',
+          email: adminEmail,
+          numberOfLicenses: finalCount
+        }),
       });
 
       const data = await response.json();
+      console.log(data);
 
-      if (!response.ok) {
-        setError(data.error || 'Failed to initiate purchase');
+      if (!data.success) {
+        setError(data.message || 'Failed to initiate purchase');
         setPurchasing(false);
         return;
       }
 
       // Redirect to Stripe checkout
-      if (data.checkout_url) {
-        window.location.href = data.checkout_url;
+      if (data.data?.url) {
+        window.location.href = data.data.url;
       } else {
         setError('No checkout URL received');
         setPurchasing(false);
@@ -619,7 +637,7 @@ const DashboardPage = () => {
       {/* Purchase Licenses Modal */}
       {showPurchaseModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-slide-in">
+          <div className="bg-white rounded-2xl p-8 max-w-xl w-full shadow-2xl animate-slide-in">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold text-gray-900">Purchase Licenses</h3>
               <button 
@@ -634,45 +652,105 @@ const DashboardPage = () => {
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
                 How many licenses would you like to purchase?
               </label>
-              <input 
-                type="number" 
-                min="1"
-                value={licenseCount}
-                onChange={(e) => setLicenseCount(parseInt(e.target.value) || 1)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-buda-blue focus:outline-none focus:ring-4 focus:ring-buda-blue/10 transition-all duration-300"
-                placeholder="Enter number of licenses"
-              />
+              
+              {/* Preset Options */}
+              <div className="grid grid-cols-5 gap-2 mb-4">
+                {LICENSE_PRESETS.map((preset) => (
+                  <button
+                    key={preset}
+                    onClick={() => {
+                      setLicenseCount(preset);
+                      setUseCustomCount(false);
+                      setCustomLicenseCount('');
+                    }}
+                    className={`py-3 rounded-xl font-semibold transition-all duration-200 ${
+                      !useCustomCount && licenseCount === preset
+                        ? 'bg-buda-blue text-white shadow-lg'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom Input */}
+              <div className="relative">
+                <input 
+                  type="number" 
+                  min="1"
+                  value={customLicenseCount}
+                  onChange={(e) => {
+                    setCustomLicenseCount(e.target.value);
+                    setUseCustomCount(true);
+                  }}
+                  onFocus={() => setUseCustomCount(true)}
+                  className={`w-full px-4 py-3 border-2 rounded-xl text-gray-900 focus:border-buda-blue focus:outline-none focus:ring-4 focus:ring-buda-blue/10 transition-all duration-300 ${
+                    useCustomCount ? 'border-buda-blue' : 'border-gray-200'
+                  }`}
+                  placeholder="Or enter a custom number..."
+                />
+                {useCustomCount && customLicenseCount && (
+                  <button
+                    onClick={() => {
+                      setUseCustomCount(false);
+                      setCustomLicenseCount('');
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18"/>
+                      <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="bg-gray-50 rounded-xl p-4 mb-6">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-gray-600">Price per license</span>
-                <span className="font-semibold text-gray-900">$15/month</span>
+                <span className="font-semibold text-gray-900">${licenseCount > 1 ? 12 : 15}/month</span>
               </div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-gray-600">Quantity</span>
-                <span className="font-semibold text-gray-900">{licenseCount}</span>
+                <span className="font-semibold text-gray-900">
+                  {useCustomCount ? (parseInt(customLicenseCount, 10) || 0) : licenseCount}
+                </span>
               </div>
               <div className="border-t border-gray-200 my-3"></div>
               <div className="flex justify-between items-center">
                 <span className="text-lg font-bold text-gray-900">Total</span>
-                <span className="text-2xl font-bold text-buda-blue">${licenseCount * 15}/month</span>
+                <span className="text-2xl font-bold text-buda-blue">
+                  ${(useCustomCount ? (parseInt(customLicenseCount, 10) || 0) : licenseCount) * (licenseCount > 1 ? 12 : 15)}/month
+                </span>
               </div>
             </div>
 
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+            )}
+
             <div className="flex gap-3">
               <button 
-                onClick={() => setShowPurchaseModal(false)}
+                onClick={() => {
+                  setShowPurchaseModal(false);
+                  setError('');
+                  setUseCustomCount(false);
+                  setCustomLicenseCount('');
+                }}
                 className="flex-1 px-6 py-3 border-2 border-gray-200 rounded-xl font-semibold text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all duration-300"
               >
                 Cancel
               </button>
               <button 
                 onClick={handlePurchaseLicenses}
-                disabled={purchasing}
+                disabled={purchasing || (useCustomCount && (!customLicenseCount || parseInt(customLicenseCount, 10) < 1))}
                 className="flex-1 px-6 py-3 bg-buda-blue text-white rounded-xl font-semibold hover:bg-blue-700 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {purchasing ? 'Processing...' : 'Continue to Payment'}
