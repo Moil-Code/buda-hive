@@ -427,13 +427,8 @@ const DashboardPage = () => {
                 <div className="text-white/70 text-xs mt-1">Total purchased</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6">
-                <div className="text-white/80 text-sm font-medium mb-2">Active Purchased</div>
-                <div className="text-4xl font-bold text-white">{licenseStats.active_purchased_license_count}</div>
-                <div className="text-white/70 text-xs mt-1">Currently active</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6">
                 <div className="text-white/80 text-sm font-medium mb-2">Available</div>
-                <div className="text-4xl font-bold text-white">{licenseStats.available_licenses}</div>
+                <div className="text-4xl font-bold text-white">{licenseStats.purchased_license_count - licenseStats.active_purchased_license_count - statistics.pending}</div>
                 <div className="text-white/70 text-xs mt-1">Ready to assign</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6">
@@ -744,7 +739,7 @@ const DashboardPage = () => {
             <div className="bg-gray-50 rounded-xl p-4 mb-6">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-gray-600">Price per license</span>
-                <span className="font-semibold text-gray-900">${licenseCount > 1 ? 12 : 15}/month</span>
+                <span className="font-semibold text-gray-900">${(licenseCount > 1 ? 12 : 15) * 12}/year</span>
               </div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-gray-600">Quantity</span>
@@ -756,7 +751,7 @@ const DashboardPage = () => {
               <div className="flex justify-between items-center">
                 <span className="text-lg font-bold text-gray-900">Total</span>
                 <span className="text-2xl font-bold text-buda-blue">
-                  ${(useCustomCount ? (parseInt(customLicenseCount, 10) || 0) : licenseCount) * (licenseCount > 1 ? 12 : 15)}/month
+                  ${(useCustomCount ? (parseInt(customLicenseCount, 10) || 0) : licenseCount) * (licenseCount > 1 ? 12 : 15) * 12}/year
                 </span>
               </div>
             </div>

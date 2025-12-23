@@ -92,7 +92,7 @@ export async function POST(request: Request) {
         results.success++;
         
         // Send activation email
-        const activationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/activate?licenseId=${license.id}`;
+        const activationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://business.moilapp.com'}/register?licenseId=${license.id}&ref=budaHive&org=buda-hive`;
         
         const emailResult = await sendLicenseActivationEmail({
           email: license.email,
