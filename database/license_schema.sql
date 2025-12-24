@@ -6,7 +6,7 @@ DROP TABLE IF EXISTS public.licenses CASCADE;
 DROP TABLE IF EXISTS public.admins CASCADE;
 
 -- Create admins table
--- Admins can only sign up with @budahive.com or @moilapp.com emails
+-- Admins can only sign up with @budaedc.com or @moilapp.com emails
 CREATE TABLE IF NOT EXISTS public.admins (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT UNIQUE NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.admins (
   last_name TEXT NOT NULL,
   company_name TEXT GENERATED ALWAYS AS (
     CASE 
-      WHEN email LIKE '%@budahive.com' THEN 'Buda Hive'
+      WHEN email LIKE '%@budaedc.com' THEN 'Buda EDC'
       WHEN email LIKE '%@moilapp.com' THEN 'Moil'
     END
   ) STORED,
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS public.admins (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   CONSTRAINT valid_admin_email CHECK (
-    email LIKE '%@budahive.com' OR email LIKE '%@moilapp.com'
+    email LIKE '%@budaedc.com' OR email LIKE '%@moilapp.com'
   ),
   CONSTRAINT valid_license_counts CHECK (
     active_purchased_license_count <= purchased_license_count
@@ -103,7 +103,7 @@ CREATE OR REPLACE FUNCTION public.handle_new_admin()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Only create admin record if email is from allowed domains
-  IF NEW.email LIKE '%@budahive.com' OR NEW.email LIKE '%@moilapp.com' THEN
+  IF NEW.email LIKE '%@budaedc.com' OR NEW.email LIKE '%@moilapp.com' THEN
     INSERT INTO public.admins (id, email, first_name, last_name)
     VALUES (
       NEW.id, 

@@ -38,6 +38,7 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [newEmail, setNewEmail] = useState('');
   const [addingLicense, setAddingLicense] = useState(false);
+  const [emailTags, setEmailTags] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -159,22 +160,49 @@ const DashboardPage = () => {
     setAddingLicense(true);
 
     try {
-      const response = await fetch('/api/licenses/add', {
+      // Combine email tags with current input
+      const allEmails = [...emailTags];
+      if (newEmail.trim()) {
+        allEmails.push(newEmail.trim());
+      }
+
+      if (allEmails.length === 0) {
+        setError('Please enter at least one email address');
+        setAddingLicense(false);
+        return;
+      }
+
+      // Use single or multiple license API based on count
+      const endpoint = allEmails.length === 1 ? '/api/licenses/add' : '/api/licenses/add-multiple';
+      const body = allEmails.length === 1 
+        ? { email: allEmails[0] }
+        : { emails: allEmails };
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: newEmail }),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Failed to add license');
+        setError(data.error || 'Failed to add license(s)');
         setAddingLicense(false);
         return;
       }
 
-      setSuccess('License added successfully!');
+      if (allEmails.length === 1) {
+        setSuccess('License added successfully!');
+      } else {
+        setSuccess(data.message || `${data.results?.success || 0} license(s) added successfully!`);
+        if (data.results?.errors?.length > 0) {
+          setError(`Some errors occurred: ${data.results.errors.slice(0, 3).join(', ')}${data.results.errors.length > 3 ? '...' : ''}`);
+        }
+      }
+
       setNewEmail('');
+      setEmailTags([]);
       fetchLicenses();
       fetchLicenseStats();
     } catch (err) {
@@ -184,6 +212,50 @@ const DashboardPage = () => {
     }
   };
 
+  const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    
+    // Check if user typed a comma
+    if (value.includes(',')) {
+      const parts = value.split(',');
+      const emailsToAdd = parts.slice(0, -1).map(email => email.trim()).filter(email => email);
+      const currentInput = parts[parts.length - 1].trim();
+      
+      // Add valid emails as tags (avoid duplicates)
+      const validEmails = emailsToAdd.filter(email => 
+        email.includes('@') && 
+        email.length > 0 && 
+        !emailTags.includes(email)
+      );
+      
+      if (validEmails.length > 0) {
+        setEmailTags(prev => [...prev, ...validEmails]);
+      }
+      
+      // Clear the input or keep the text after the last comma
+      setNewEmail(currentInput);
+    } else {
+      setNewEmail(value);
+    }
+  };
+
+  const handleEmailInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && newEmail.trim()) {
+      e.preventDefault();
+      const email = newEmail.trim();
+      if (email.includes('@') && !emailTags.includes(email)) {
+        setEmailTags(prev => [...prev, email]);
+        setNewEmail('');
+      }
+    } else if (e.key === 'Backspace' && !newEmail && emailTags.length > 0) {
+      // Remove last tag if backspace is pressed on empty input
+      setEmailTags(prev => prev.slice(0, -1));
+    }
+  };
+
+  const removeEmailTag = (emailToRemove: string) => {
+    setEmailTags(prev => prev.filter(email => email !== emailToRemove));
+  };
 
   const handleResendEmail = async (licenseId: string) => {
     try {
@@ -490,29 +562,65 @@ const DashboardPage = () => {
           <div className="mb-6">
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Add New License</h3>
             <p className="text-gray-600 text-sm">
-              📝 Enter an email address to create a new license. {licenseStats.available_licenses === 0 && <span className="text-red-600 font-semibold">⚠️ No available licenses. Please purchase more licenses first.</span>}
+              📝 Enter email addresses separated by commas to create multiple licenses. {licenseStats.available_licenses === 0 && <span className="text-red-600 font-semibold">⚠️ No available licenses. Please purchase more licenses first.</span>}
             </p>
           </div>
           
-          <form onSubmit={handleAddLicense} className="flex gap-3 mb-6">
+          <form onSubmit={handleAddLicense} className="space-y-4 mb-6">
             <div className="flex-1">
-              <input 
-                type="email" 
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:border-buda-blue focus:outline-none focus:ring-4 focus:ring-buda-blue/10 transition-all duration-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                placeholder="Enter email address (e.g., john@example.com)"
-                required
-                disabled={addingLicense || licenseStats.available_licenses === 0}
-              />
+              {/* Email Tags Display */}
+              {emailTags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3 p-3 bg-gray-50 rounded-lg border-2 border-gray-200">
+                  {emailTags.map((email, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-buda-blue text-white text-sm rounded-full"
+                    >
+                      {email}
+                      <button
+                        type="button"
+                        onClick={() => removeEmailTag(email)}
+                        className="ml-1 hover:bg-blue-700 rounded-full p-0.5 transition-colors"
+                      >
+                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="18" y1="6" x2="6" y2="18"/>
+                          <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              
+              <div className="flex gap-3">
+                <input 
+                  type="text" 
+                  value={newEmail}
+                  onChange={handleEmailInputChange}
+                  onKeyDown={handleEmailInputKeyDown}
+                  className="flex-1 px-4 py-3.5 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:border-buda-blue focus:outline-none focus:ring-4 focus:ring-buda-blue/10 transition-all duration-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="Enter email addresses separated by commas (e.g., john@example.com, jane@example.com)"
+                  disabled={addingLicense || licenseStats.available_licenses === 0}
+                />
+                <button 
+                  type="submit" 
+                  disabled={addingLicense || licenseStats.available_licenses === 0 || (emailTags.length === 0 && !newEmail.trim())}
+                  className="px-7 py-3.5 bg-buda-blue text-white rounded-xl font-semibold hover:bg-blue-700 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {addingLicense ? 'Adding...' : `Add License${emailTags.length > 0 || (newEmail.includes(',')) ? 's' : ''}`}
+                </button>
+              </div>
             </div>
-            <button 
-              type="submit" 
-              disabled={addingLicense || licenseStats.available_licenses === 0}
-              className="px-7 py-3.5 bg-buda-blue text-white rounded-xl font-semibold hover:bg-blue-700 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {addingLicense ? 'Adding...' : 'Add License'}
-            </button>
+            
+            {/* Helper Text */}
+            <div className="text-sm text-gray-500">
+              💡 <strong>Tip:</strong> Type emails separated by commas, or press Enter after each email to add them as tags. 
+              {emailTags.length > 0 && (
+                <span className="ml-2 text-buda-blue font-medium">
+                  {emailTags.length} email{emailTags.length > 1 ? 's' : ''} ready to add
+                </span>
+              )}
+            </div>
           </form>
 
           {/* CSV Upload */}
