@@ -4,7 +4,7 @@ A Next.js application for managing Moil/Buda Hive business platform licenses. Ad
 
 ## Features
 
-- 🔐 **Admin Authentication**: Secure login/signup restricted to @budahive.com and @moilapp.com emails
+- 🔐 **Admin Authentication**: Secure login/signup restricted to @budaedc.com and @moilapp.com emails
 - 📊 **License Dashboard**: Real-time overview of total, activated, and pending licenses
 - ➕ **License Management**: Add, activate, and remove user licenses
 - 📧 **Email Notifications**: Automated activation emails with secure tokens
@@ -101,7 +101,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_email@gmail.com
 SMTP_PASS=your_app_password
-FROM_EMAIL=noreply@budahive.com
+FROM_EMAIL=noreply@budaedc.com
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
@@ -110,7 +110,7 @@ For Gmail, you'll need to create an [App Password](https://support.google.com/ac
 ### 6. Create Your First Admin Account
 
 1. Go to `/admin/signup` to create an admin account
-2. Use an email ending with `@budahive.com` or `@moilapp.com`
+2. Use an email ending with `@budaedc.com` or `@moilapp.com`
 3. Check your email for verification (if email confirmation is enabled)
 4. Login at `/admin/login` and access the admin dashboard
 
@@ -161,7 +161,7 @@ buda-hive-license-management/
 ## Key Features
 
 ### Admin Authentication Flow
-- Restricted signup to @budahive.com and @moilapp.com domains
+- Restricted signup to @budaedc.com and @moilapp.com domains
 - Secure login with Supabase Auth
 - Protected admin routes with middleware
 - Automatic admin profile creation via database triggers
@@ -246,7 +246,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_email@gmail.com
 SMTP_PASS=your_app_password
-FROM_EMAIL=noreply@budahive.com
+FROM_EMAIL=noreply@budaedc.com
 
 # Application URL (for activation links)
 NEXT_PUBLIC_APP_URL=https://yourdomain.com
