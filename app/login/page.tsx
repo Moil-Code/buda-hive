@@ -20,8 +20,8 @@ const AdminLoginPage = () => {
     setLoading(true);
 
     // Validate email domain on client side
-    if (!email.endsWith('@budahive.com') && !email.endsWith('@moilapp.com')) {
-      setError('Only @budahive.com or @moilapp.com email addresses are allowed for admin accounts');
+    if (!email.endsWith('@budaedc.com') && !email.endsWith('@moilapp.com')) {
+      setError('Only @budaedc.com or @moilapp.com email addresses are allowed for admin accounts');
       setLoading(false);
       return;
     }
@@ -115,7 +115,7 @@ const AdminLoginPage = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-buda-blue/20 focus:border-buda-blue transition-all text-gray-900 placeholder-gray-400"
-                    placeholder="admin@budahive.com"
+                    placeholder="admin@budaedc.com"
                     required
                     disabled={loading}
                   />

@@ -22,8 +22,8 @@ const AdminSignupPage = () => {
     setLoading(true);
 
     // Validate email domain on client side
-    if (!email.endsWith('@budahive.com') && !email.endsWith('@moilapp.com')) {
-      setError('Only @budahive.com or @moilapp.com email addresses are allowed for admin accounts');
+    if (!email.endsWith('@budaedc.com') && !email.endsWith('@moilapp.com')) {
+      setError('Only @budaedc.com or @moilapp.com email addresses are allowed for admin accounts');
       setLoading(false);
       return;
     }
