@@ -15,7 +15,7 @@ export async function GET() {
     // Verify user is an admin
     const { data: admin, error: adminError } = await supabase
       .from('admins')
-      .select('id, email')
+      .select('id, email, purchased_license_count')
       .eq('id', user.id)
       .single();
 
@@ -62,7 +62,16 @@ export async function GET() {
     const assignedLicenses = licenses?.length || 0;
     const activated = licenses?.filter(l => l.is_activated).length || 0;
     const pending = assignedLicenses - activated;
-    const purchasedLicenseCount = team?.purchased_license_count || 0;
+    
+    // Get purchased license count from team or admin
+    let purchasedLicenseCount = 0;
+    if (team?.purchased_license_count) {
+      purchasedLicenseCount = team.purchased_license_count;
+    } else {
+      // Solo admin - get from admin record
+      purchasedLicenseCount = admin.purchased_license_count || 0;
+    }
+    
     const availableLicenses = purchasedLicenseCount - assignedLicenses;
 
     return NextResponse.json({

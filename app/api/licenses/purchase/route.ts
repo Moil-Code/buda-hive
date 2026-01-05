@@ -93,54 +93,83 @@ export async function GET(request: Request) {
     }
 
     // Get user's team membership
-    const { data: teamMember, error: teamMemberError } = await supabaseAdmin
+    const { data: teamMember } = await supabaseAdmin
       .from('team_members')
       .select('team_id')
       .eq('admin_id', user.id)
       .single();
 
-    if (teamMemberError || !teamMember) {
-      console.log('User is not in a team:', teamMemberError);
-      return NextResponse.redirect(new URL('/admin/dashboard?error=no_team', request.url));
+    const teamId = teamMember?.team_id;
+    let newLicenseCount: number;
+
+    if (teamId) {
+      // User is in a team - update team's purchased license count
+      const { data: team, error: teamError } = await supabaseAdmin
+        .from('teams')
+        .select('id, purchased_license_count')
+        .eq('id', teamId)
+        .single();
+
+      if (teamError || !team) {
+        console.error('Team not found:', teamError);
+        return NextResponse.redirect(new URL('/admin/dashboard?error=team_not_found', request.url));
+      }
+
+      console.log('Current team license count:', team.purchased_license_count);
+
+      newLicenseCount = (team.purchased_license_count || 0) + licenseCountNum;
+      
+      const { error: updateError } = await supabaseAdmin
+        .from('teams')
+        .update({ purchased_license_count: newLicenseCount })
+        .eq('id', team.id);
+
+      if (updateError) {
+        console.error('Failed to update team license count:', updateError);
+        return NextResponse.redirect(new URL('/admin/dashboard?error=update_failed', request.url));
+      }
+
+      console.log('Team license count updated successfully:', newLicenseCount);
+
+      // Log activity for team
+      await supabaseAdmin.rpc('log_activity', {
+        p_team_id: team.id,
+        p_admin_id: user.id,
+        p_activity_type: 'licenses_purchased',
+        p_description: `Purchased ${licenseCountNum} license(s)`,
+        p_metadata: { licenses_added: licenseCountNum, total_licenses: newLicenseCount }
+      });
+    } else {
+      // User is a solo admin - update admin's purchased license count
+      console.log('User is a solo admin, updating admin license count');
+
+      const { data: adminData, error: adminFetchError } = await supabaseAdmin
+        .from('admins')
+        .select('purchased_license_count')
+        .eq('id', user.id)
+        .single();
+
+      if (adminFetchError || !adminData) {
+        console.error('Failed to fetch admin data:', adminFetchError);
+        return NextResponse.redirect(new URL('/admin/dashboard?error=admin_fetch_failed', request.url));
+      }
+
+      console.log('Current admin license count:', adminData.purchased_license_count);
+
+      newLicenseCount = (adminData.purchased_license_count || 0) + licenseCountNum;
+      
+      const { error: updateError } = await supabaseAdmin
+        .from('admins')
+        .update({ purchased_license_count: newLicenseCount })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Failed to update admin license count:', updateError);
+        return NextResponse.redirect(new URL('/admin/dashboard?error=update_failed', request.url));
+      }
+
+      console.log('Admin license count updated successfully:', newLicenseCount);
     }
-
-    // Get current team data
-    const { data: team, error: teamError } = await supabaseAdmin
-      .from('teams')
-      .select('id, purchased_license_count')
-      .eq('id', teamMember.team_id)
-      .single();
-
-    if (teamError || !team) {
-      console.error('Team not found:', teamError);
-      return NextResponse.redirect(new URL('/admin/dashboard?error=team_not_found', request.url));
-    }
-
-    console.log('Current team license count:', team.purchased_license_count);
-
-    // Update the team's purchased license count
-    const newLicenseCount = (team.purchased_license_count || 0) + licenseCountNum;
-    
-    const { error: updateError } = await supabaseAdmin
-      .from('teams')
-      .update({ purchased_license_count: newLicenseCount })
-      .eq('id', team.id);
-
-    if (updateError) {
-      console.error('Failed to update team license count:', updateError);
-      return NextResponse.redirect(new URL('/admin/dashboard?error=update_failed', request.url));
-    }
-
-    console.log('Team license count updated successfully:', newLicenseCount);
-
-    // Log activity
-    await supabaseAdmin.rpc('log_activity', {
-      p_team_id: team.id,
-      p_admin_id: user.id,
-      p_activity_type: 'licenses_purchased',
-      p_description: `Purchased ${licenseCountNum} license(s)`,
-      p_metadata: { licenses_added: licenseCountNum, total_licenses: newLicenseCount }
-    });
 
     // Redirect to dashboard with success message
     return NextResponse.redirect(new URL(`/admin/dashboard?success=purchase_complete&licenses_added=${licenseCountNum}&total_licenses=${newLicenseCount}`, request.url));

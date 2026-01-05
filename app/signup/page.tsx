@@ -4,10 +4,14 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useToast } from '@/components/ui/toast/use-toast';
+import { Spinner } from '@/components/ui/spinner';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, User, ArrowLeft, CheckCircle, Shield } from 'lucide-react';
 
 function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   
   // Get invite parameters from URL
   const inviteToken = searchParams.get('invite');
@@ -20,8 +24,6 @@ function SignupContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   
   // Check if this is an invite signup
@@ -29,19 +31,26 @@ function SignupContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     // Validate email domain on client side
     if (!email.endsWith('@budaedc.com') && !email.endsWith('@moilapp.com')) {
-      setError('Only @budaedc.com or @moilapp.com email addresses are allowed for admin accounts');
+      toast({
+        title: "Invalid Email Domain",
+        description: "Only @budaedc.com or @moilapp.com email addresses are allowed for admin accounts",
+        type: "error"
+      });
       setLoading(false);
       return;
     }
 
     // Validate password length
     if (password.length < 8) {
-      setError('Password must be at least 8 characters long');
+      toast({
+        title: "Weak Password",
+        description: "Password must be at least 8 characters long",
+        type: "error"
+      });
       setLoading(false);
       return;
     }
@@ -63,18 +72,31 @@ function SignupContent() {
       });
 
       if (signUpError) {
-        setError(signUpError.message);
+        toast({
+          title: "Signup Failed",
+          description: signUpError.message,
+          type: "error"
+        });
         setLoading(false);
         return;
       }
 
       if (!data.user) {
-        setError('Failed to create user');
+        toast({
+          title: "Signup Failed",
+          description: "Failed to create user",
+          type: "error"
+        });
         setLoading(false);
         return;
       }
 
-      setSuccess(true);
+      toast({
+        title: "Account Created",
+        description: "Account created successfully! Redirecting to login...",
+        type: "success"
+      });
+
       setTimeout(() => {
         // If this is an invite signup, redirect to accept invite page after login
         if (inviteToken) {
@@ -86,7 +108,11 @@ function SignupContent() {
         }
       }, 2000);
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        type: "error"
+      });
       setLoading(false);
     }
   };
@@ -125,20 +151,15 @@ function SignupContent() {
 
           {/* Team Invite Banner */}
           {isInviteSignup && teamName && (
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 mb-6 text-white animate-slide-in">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 mb-6 text-white animate-slide-in shadow-lg border border-white/10">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                  </svg>
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <User className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <p className="text-white/80 text-sm">You're joining</p>
                   <p className="text-xl font-bold">{decodeURIComponent(teamName)}</p>
-                  {teamId && <p className="text-white/60 text-xs font-mono">Team ID: {teamId}</p>}
+                  {teamId && <p className="text-white/60 text-xs font-mono mt-1">Team ID: {teamId.slice(0, 8)}...</p>}
                 </div>
               </div>
             </div>
@@ -148,18 +169,6 @@ function SignupContent() {
           <div className="bg-white rounded-[24px] p-8 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden animate-slide-in backdrop-blur-sm bg-opacity-95">
              {/* Decorative top accent */}
              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-buda-blue via-indigo-500 to-buda-yellow"></div>
-
-            {error && (
-              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-                <p className="text-red-800 text-sm">{error}</p>
-              </div>
-            )}
-
-            {success && (
-              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl">
-                <p className="text-green-800 text-sm">Account created successfully! Redirecting to login...</p>
-              </div>
-            )}
 
             <form onSubmit={handleSubmit} className="space-y-5 mt-4">
               <div className="grid grid-cols-2 gap-4">
@@ -196,14 +205,12 @@ function SignupContent() {
                     type="email" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-buda-blue/20 focus:border-buda-blue transition-all text-gray-900 placeholder-gray-400"
+                    className="w-full px-4 py-3 pl-11 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-buda-blue/20 focus:border-buda-blue transition-all text-gray-900 placeholder-gray-400"
                     placeholder="name@company.com"
                     required
                     disabled={loading}
                   />
-                  <svg className="w-5 h-5 text-gray-400 absolute right-3.5 top-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                  </svg>
+                  <Mail className="w-5 h-5 text-gray-400 absolute left-3.5 top-3.5" />
                 </div>
               </div>
 
@@ -214,12 +221,13 @@ function SignupContent() {
                     type={showPassword ? "text" : "password"} 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-buda-blue/20 focus:border-buda-blue transition-all text-gray-900 placeholder-gray-400"
+                    className="w-full px-4 py-3 pl-11 pr-12 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-buda-blue/20 focus:border-buda-blue transition-all text-gray-900 placeholder-gray-400"
                     placeholder="Min. 8 characters"
                     required
                     minLength={8}
                     disabled={loading}
                   />
+                  <Lock className="w-5 h-5 text-gray-400 absolute left-3.5 top-3.5" />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
@@ -227,15 +235,9 @@ function SignupContent() {
                     disabled={loading}
                   >
                     {showPassword ? (
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                        <line x1="1" y1="1" x2="23" y2="23"/>
-                      </svg>
+                      <EyeOff className="w-5 h-5" />
                     ) : (
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                      </svg>
+                      <Eye className="w-5 h-5" />
                     )}
                   </button>
                 </div>
@@ -243,11 +245,7 @@ function SignupContent() {
 
               <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
                 <div className="flex gap-3">
-                    <svg className="w-5 h-5 text-buda-blue flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
+                    <Shield className="w-5 h-5 text-buda-blue flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-blue-800 leading-relaxed">
                         Admin accounts require approval from Moil. You will receive an email once your account has been verified.
                     </p>
@@ -259,11 +257,16 @@ function SignupContent() {
                 disabled={loading}
                 className="w-full bg-buda-blue text-white font-semibold py-3.5 rounded-xl hover:bg-blue-700 focus:ring-4 focus:ring-buda-blue/20 transition-all duration-300 shadow-lg shadow-buda-blue/20 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span>{loading ? 'Creating Account...' : 'Create Admin Account'}</span>
-                {!loading && (
-                  <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
+                {loading ? (
+                  <>
+                    <Spinner size="sm" className="text-white border-white" />
+                    <span>Creating Account...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Create Admin Account</span>
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </>
                 )}
               </button>
             </form>
@@ -277,9 +280,7 @@ function SignupContent() {
           
           <div className="mt-8 text-center pb-8">
             <Link href="/login" className="text-white/40 hover:text-white text-sm transition-colors flex items-center justify-center gap-2">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M19 12H5M12 19l-7-7 7-7"/>
-                </svg>
+                <ArrowLeft className="w-4 h-4" />
                 Return to User Login
             </Link>
           </div>
@@ -294,7 +295,7 @@ export default function AdminSignupPage() {
     <Suspense fallback={
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-buda-blue"></div>
+          <Spinner size="lg" className="mx-auto border-buda-blue" />
           <p className="mt-4 text-slate-400">Loading...</p>
         </div>
       </div>

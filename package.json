@@ -1,7 +1,7 @@
 {
-  "name": "buda-hive-license-management",
+  "name": "license-management",
   "version": "1.0.0",
-  "description": "License management system for Moil/Buda Hive business platform",
+  "description": "License management system for Moil business platform",
   "private": true,
   "scripts": {
     "dev": "next dev",

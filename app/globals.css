@@ -212,6 +212,15 @@ body {
   }
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .animate-pulse-slow {
   animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -226,6 +235,10 @@ body {
 
 .animate-fill-progress {
   animation: fill-progress 1s ease-out;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
 @layer utilities {

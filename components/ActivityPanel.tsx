@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useToast } from '@/components/ui/toast/use-toast';
+import { Spinner } from '@/components/ui/spinner';
+import { X, Activity as ActivityIcon, Filter, ChevronLeft, ChevronRight, Inbox, Users, Clock } from 'lucide-react';
 
 interface Activity {
   id: string;
@@ -49,10 +52,10 @@ const ACTIVITY_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function ActivityPanel({ onClose }: ActivityPanelProps) {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [total, setTotal] = useState(0);
-  const [error, setError] = useState('');
   const [filter, setFilter] = useState<string>('');
   const [offset, setOffset] = useState(0);
   const [hasTeam, setHasTeam] = useState(true);
@@ -77,16 +80,18 @@ export default function ActivityPanel({ onClose }: ActivityPanelProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Failed to load activities');
-        setLoading(false);
-        return;
+        throw new Error(data.error || 'Failed to load activities');
       }
 
       setActivities(data.activities);
       setTotal(data.total);
       setHasTeam(data.hasTeam !== false);
-    } catch (err) {
-      setError('Failed to load activities');
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to load activities',
+        type: "error"
+      });
     } finally {
       setLoading(false);
     }
@@ -120,39 +125,35 @@ export default function ActivityPanel({ onClose }: ActivityPanelProps) {
   const currentPage = Math.floor(offset / limit) + 1;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-8 py-6 flex justify-between items-center">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 md:px-8 md:py-6 flex justify-between items-center z-10">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <ActivityIcon className="w-6 h-6 text-buda-blue" />
               Activity Log
             </h2>
-            <p className="text-gray-600 text-sm">Track all actions taken by team members</p>
+            <p className="text-gray-600 text-sm mt-1">Track all actions taken by team members</p>
           </div>
           <button 
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
           >
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
+            <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* Filter */}
-        <div className="px-8 py-4 border-b border-gray-100 bg-gray-50">
+        <div className="px-6 md:px-8 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
+          <Filter className="w-4 h-4 text-gray-500" />
           <select
             value={filter}
             onChange={(e) => {
               setFilter(e.target.value);
               setOffset(0);
             }}
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:border-buda-blue focus:outline-none bg-white text-sm"
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:border-buda-blue focus:outline-none bg-white text-sm w-full md:w-auto hover:border-gray-300 transition-colors cursor-pointer"
           >
             <option value="">All Activities</option>
             <optgroup label="License Actions">
@@ -174,27 +175,16 @@ export default function ActivityPanel({ onClose }: ActivityPanelProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
-              <p className="text-red-800 text-sm">{error}</p>
-            </div>
-          )}
-
+        <div className="flex-1 overflow-y-auto p-6 md:p-8">
           {loading ? (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-buda-blue"></div>
-              <p className="mt-4 text-gray-600">Loading activities...</p>
+              <Spinner size="lg" className="mx-auto" />
+              <p className="mt-4 text-gray-600 animate-pulse">Loading activities...</p>
             </div>
           ) : !hasTeam ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-buda-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
+                <Users className="w-8 h-8 text-buda-blue" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Team Activity</h3>
               <p className="text-gray-600 max-w-sm mx-auto">
@@ -204,15 +194,13 @@ export default function ActivityPanel({ onClose }: ActivityPanelProps) {
           ) : activities.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
+                <Inbox className="w-8 h-8 text-gray-400" />
               </div>
               <p className="text-gray-600">No activities found</p>
               {filter && (
                 <button
                   onClick={() => setFilter('')}
-                  className="mt-2 text-buda-blue hover:underline text-sm"
+                  className="mt-2 text-buda-blue hover:underline text-sm font-medium"
                 >
                   Clear filter
                 </button>
@@ -223,26 +211,32 @@ export default function ActivityPanel({ onClose }: ActivityPanelProps) {
               {activities.map((activity) => {
                 const config = getActivityConfig(activity.activity_type);
                 return (
-                  <div key={activity.id} className="flex gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                    <div className={`w-10 h-10 ${config.bgColor} rounded-full flex items-center justify-center flex-shrink-0`}>
+                  <div key={activity.id} className="flex gap-4 p-4 bg-gray-50 rounded-xl hover:bg-white hover:shadow-md border border-transparent hover:border-gray-100 transition-all duration-200">
+                    <div className={`w-10 h-10 ${config.bgColor} rounded-full flex items-center justify-center flex-shrink-0 shadow-sm`}>
                       <span className="text-lg">{config.icon}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <span className={`text-xs font-semibold ${config.color} uppercase tracking-wide`}>
+                          <span className={`text-xs font-semibold ${config.color} uppercase tracking-wide px-2 py-0.5 rounded-full bg-white/50`}>
                             {ACTIVITY_TYPE_LABELS[activity.activity_type] || activity.activity_type}
                           </span>
-                          <p className="text-gray-900 mt-1">{activity.description}</p>
+                          <p className="text-gray-900 mt-1.5 leading-snug">{activity.description}</p>
                         </div>
-                        <span className="text-gray-500 text-sm whitespace-nowrap">
+                        <span className="text-gray-400 text-xs whitespace-nowrap flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
                           {formatDate(activity.created_at)}
                         </span>
                       </div>
                       {activity.admin && (
-                        <p className="text-gray-500 text-sm mt-1">
-                          by {activity.admin.first_name} {activity.admin.last_name}
-                        </p>
+                        <div className="flex items-center gap-1.5 mt-2 text-xs text-gray-500">
+                          <div className="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-medium text-gray-600">
+                            {activity.admin.first_name?.[0] || activity.admin.email[0].toUpperCase()}
+                          </div>
+                          <span>
+                            by <span className="font-medium text-gray-700">{activity.admin.first_name} {activity.admin.last_name}</span>
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -254,24 +248,26 @@ export default function ActivityPanel({ onClose }: ActivityPanelProps) {
 
         {/* Pagination */}
         {total > limit && (
-          <div className="border-t border-gray-200 px-8 py-4 flex items-center justify-between bg-gray-50">
-            <p className="text-gray-600 text-sm">
+          <div className="border-t border-gray-200 px-6 py-4 md:px-8 flex items-center justify-between bg-gray-50">
+            <p className="text-gray-600 text-sm font-medium">
               Showing {offset + 1}-{Math.min(offset + limit, total)} of {total}
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => setOffset(Math.max(0, offset - limit))}
                 disabled={offset === 0}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-white hover:border-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               >
+                <ChevronLeft className="w-4 h-4" />
                 Previous
               </button>
               <button
                 onClick={() => setOffset(offset + limit)}
                 disabled={currentPage >= totalPages}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-white hover:border-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               >
                 Next
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -280,3 +276,4 @@ export default function ActivityPanel({ onClose }: ActivityPanelProps) {
     </div>
   );
 }
+
