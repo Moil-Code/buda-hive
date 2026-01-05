@@ -394,10 +394,22 @@ END $$;
 -- These policies avoid infinite recursion by using simple conditions
 -- Complex authorization is handled in the application layer
 
--- ADMINS TABLE - Simple self-access
+-- ADMINS TABLE - Allow team members to see each other's info
 CREATE POLICY "admins_select" ON public.admins
   FOR SELECT TO authenticated
-  USING (id = auth.uid());
+  USING (
+    -- User can see their own info
+    id = auth.uid()
+    OR
+    -- User can see info of admins in their team
+    id IN (
+      SELECT tm.admin_id 
+      FROM public.team_members tm
+      WHERE tm.team_id IN (
+        SELECT team_id FROM public.team_members WHERE admin_id = auth.uid()
+      )
+    )
+  );
 
 CREATE POLICY "admins_update" ON public.admins
   FOR UPDATE TO authenticated
