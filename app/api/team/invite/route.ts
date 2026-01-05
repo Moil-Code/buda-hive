@@ -139,7 +139,7 @@ export async function POST(request: Request) {
       : 'A team member';
 
     // Send invitation email
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://budahive.moilapp.com';
     const inviteUrl = `${baseUrl}/invite/accept?token=${invitation.token}`;
     const signupUrl = `${baseUrl}/signup?invite=${invitation.token}&team=${team.id}&teamName=${encodeURIComponent(team.name)}`;
     
