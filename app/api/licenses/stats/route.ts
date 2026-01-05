@@ -12,10 +12,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify user is an admin and get their license stats
+    // Verify user is an admin
     const { data: admin, error: adminError } = await supabase
       .from('admins')
-      .select('id, email, purchased_license_count, active_purchased_license_count')
+      .select('id, email')
       .eq('id', user.id)
       .single();
 
@@ -23,10 +23,29 @@ export async function GET() {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
+    // Get license stats from licenses table
+    const { data: licenses, error: licensesError } = await supabase
+      .from('licenses')
+      .select('id, is_activated')
+      .eq('admin_id', user.id);
+
+    if (licensesError) {
+      console.error('License stats fetch error:', licensesError);
+      return NextResponse.json({ error: 'Failed to fetch license stats' }, { status: 500 });
+    }
+
+    const total = licenses?.length || 0;
+    const activated = licenses?.filter(l => l.is_activated).length || 0;
+    const pending = total - activated;
+
     return NextResponse.json({
-      purchased_license_count: admin.purchased_license_count,
-      active_purchased_license_count: admin.active_purchased_license_count,
-      available_licenses: admin.purchased_license_count - admin.active_purchased_license_count,
+      total,
+      activated,
+      pending,
+      // Legacy field names for backward compatibility
+      purchased_license_count: total,
+      active_purchased_license_count: activated,
+      available_licenses: pending,
     }, { status: 200 });
 
   } catch (error) {

@@ -1,0 +1,25 @@
+{
+    "partners": [
+        {
+            "id": "buda-hive",
+            "name": "Buda EDC",
+            "fullName": "Buda Economic Development Corporation",
+            "programName": "Buda Hive",
+            "domain": "budaedc.com",
+            "city": "Buda",
+            "state": "TX",
+            "country": "US",
+            "primaryColor": "#1e40af",
+            "accentColor": "#3b82f6",
+            "logoInitial": "B",
+            "supportEmail": "cs@moilapp.com",
+            "licenseDuration": "1 year",
+            "features": {
+                "jobPosts": 3,
+                "aiCoach": true,
+                "marketResearch": true,
+                "businessTemplates": true
+            }
+        }
+    ]
+}

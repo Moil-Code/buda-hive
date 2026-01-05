@@ -12,13 +12,31 @@ import {
 } from '@react-email/components';
 import * as React from 'react';
 
+interface EdcInfo {
+  programName: string;
+  fullName: string;
+  logoInitial: string;
+  primaryColor: string;
+  supportEmail: string;
+}
+
 interface TeamInvitationEmailProps {
   email: string;
   inviterName: string;
   teamName: string;
   inviteUrl: string;
   role: string;
+  edc?: EdcInfo;
 }
+
+// Default EDC info (Buda Hive)
+const defaultEdc: EdcInfo = {
+  programName: 'Buda Hive',
+  fullName: 'Buda Economic Development Corporation',
+  logoInitial: 'B',
+  primaryColor: '#1e40af',
+  supportEmail: 'cs@moilapp.com',
+};
 
 export const TeamInvitationEmail = ({
   email,
@@ -26,20 +44,38 @@ export const TeamInvitationEmail = ({
   teamName,
   inviteUrl,
   role,
+  edc = defaultEdc,
 }: TeamInvitationEmailProps) => {
+  const edcInfo = { ...defaultEdc, ...edc };
   const roleDisplay = role === 'admin' ? 'an Admin' : 'a Team Member';
+  
+  // Dynamic styles based on EDC colors
+  const dynamicHeader = {
+    ...header,
+    backgroundColor: edcInfo.primaryColor,
+  };
+  
+  const dynamicButton = {
+    ...button,
+    backgroundColor: edcInfo.primaryColor,
+  };
+  
+  const dynamicLink = {
+    ...link,
+    color: edcInfo.primaryColor,
+  };
   
   return (
     <Html>
       <Head />
-      <Preview>You've been invited to join {teamName} on Buda Hive! 🤝</Preview>
+      <Preview>You've been invited to join {teamName} on {edcInfo.programName}! 🤝</Preview>
       <Body style={main}>
         <Container style={container}>
           {/* Header */}
-          <Section style={header}>
+          <Section style={dynamicHeader}>
             <div style={logoContainer}>
-              <div style={logo}>B</div>
-              <Text style={logoText}>Buda Hive</Text>
+              <div style={logo}>{edcInfo.logoInitial}</div>
+              <Text style={logoText}>{edcInfo.programName}</Text>
             </div>
           </Section>
 
@@ -48,16 +84,16 @@ export const TeamInvitationEmail = ({
             <Heading style={h1}>You're Invited! 🤝</Heading>
             
             <Text style={text}>
-              <strong>{inviterName}</strong> has invited you to join <strong>{teamName}</strong> as {roleDisplay} on Buda Hive.
+              <strong>{inviterName}</strong> has invited you to join <strong>{teamName}</strong> as {roleDisplay} on {edcInfo.programName}.
             </Text>
 
             <Text style={text}>
-              As a team member, you'll be able to collaborate on license management, help onboard new users, and contribute to your organization's success on the Buda Hive platform.
+              As a team member, you'll be able to collaborate on license management, help onboard new users, and contribute to your organization's success on the {edcInfo.programName} platform.
             </Text>
 
             {/* CTA Button */}
             <Section style={buttonContainer}>
-              <Button style={button} href={inviteUrl}>
+              <Button style={dynamicButton} href={inviteUrl}>
                 Accept Invitation
               </Button>
             </Section>
@@ -66,7 +102,7 @@ export const TeamInvitationEmail = ({
               Or copy and paste this URL into your browser:
             </Text>
             <Text style={linkText}>
-              <Link href={inviteUrl} style={link}>
+              <Link href={inviteUrl} style={dynamicLink}>
                 {inviteUrl}
               </Link>
             </Text>
@@ -88,14 +124,14 @@ export const TeamInvitationEmail = ({
             {/* Important Note */}
             <Section style={noteContainer}>
               <Text style={noteText}>
-                <strong>Note:</strong> This invitation will expire in 7 days. If you don't have a Buda Hive account yet, you'll be prompted to create one when you accept this invitation.
+                <strong>Note:</strong> This invitation will expire in 7 days. If you don't have a {edcInfo.programName} account yet, you'll be prompted to create one when you accept this invitation.
               </Text>
             </Section>
 
             <Text style={text}>
               Questions? Contact the person who invited you or reach out to our support team at{' '}
-              <Link href="mailto:cs@moilapp.com" style={link}>
-                cs@moilapp.com
+              <Link href={`mailto:${edcInfo.supportEmail}`} style={dynamicLink}>
+                {edcInfo.supportEmail}
               </Link>
             </Text>
           </Section>
@@ -103,10 +139,10 @@ export const TeamInvitationEmail = ({
           {/* Footer */}
           <Section style={footer}>
             <Text style={footerText}>
-              Powered by Moil • Sponsored by Buda Economic Development Corporation
+              Powered by Moil • Sponsored by {edcInfo.fullName}
             </Text>
             <Text style={footerText}>
-              This email was sent to {email} because you were invited to join a team on Buda Hive.
+              This email was sent to {email} because you were invited to join a team on {edcInfo.programName}.
             </Text>
             <Text style={footerText}>
               If you didn't expect this invitation, you can safely ignore this email.

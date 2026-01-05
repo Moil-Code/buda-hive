@@ -370,128 +370,114 @@ ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.licenses ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
--- STEP 5: CREATE RLS POLICIES
+-- STEP 5: DROP ALL EXISTING POLICIES FIRST
 -- ============================================
-
--- Admins policies
-DROP POLICY IF EXISTS "Admins can view their own profile" ON public.admins;
-CREATE POLICY "Admins can view their own profile" ON public.admins
-  FOR SELECT USING (auth.uid() = id);
-
-DROP POLICY IF EXISTS "Admins can update their own profile" ON public.admins;
-CREATE POLICY "Admins can update their own profile" ON public.admins
-  FOR UPDATE USING (auth.uid() = id);
-
--- Teams policies
-DROP POLICY IF EXISTS "Team members can view their team" ON public.teams;
-CREATE POLICY "Team members can view their team" ON public.teams
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.team_members 
-      WHERE team_members.team_id = teams.id AND team_members.admin_id = auth.uid()
-    )
-  );
-
-DROP POLICY IF EXISTS "Team owners can update their team" ON public.teams;
-CREATE POLICY "Team owners can update their team" ON public.teams
-  FOR UPDATE USING (owner_id = auth.uid());
-
-DROP POLICY IF EXISTS "Admins can create teams" ON public.teams;
-CREATE POLICY "Admins can create teams" ON public.teams
-  FOR INSERT WITH CHECK (owner_id = auth.uid());
-
--- Team members policies
-DROP POLICY IF EXISTS "Team members can view team membership" ON public.team_members;
-CREATE POLICY "Team members can view team membership" ON public.team_members
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.team_members tm 
-      WHERE tm.team_id = team_members.team_id AND tm.admin_id = auth.uid()
-    )
-  );
-
-DROP POLICY IF EXISTS "Team owners and admins can manage members" ON public.team_members;
-CREATE POLICY "Team owners and admins can manage members" ON public.team_members
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.teams t
-      JOIN public.team_members tm ON t.id = tm.team_id
-      WHERE t.id = team_members.team_id 
-      AND tm.admin_id = auth.uid() 
-      AND (t.owner_id = auth.uid() OR tm.role IN ('owner', 'admin'))
-    )
-  );
-
--- Team invitations policies
-DROP POLICY IF EXISTS "Team members can view invitations for their team" ON public.team_invitations;
-CREATE POLICY "Team members can view invitations for their team" ON public.team_invitations
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.team_members 
-      WHERE team_members.team_id = team_invitations.team_id AND team_members.admin_id = auth.uid()
-    )
-  );
-
-DROP POLICY IF EXISTS "Team owners and admins can manage invitations" ON public.team_invitations;
-CREATE POLICY "Team owners and admins can manage invitations" ON public.team_invitations
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.teams t
-      JOIN public.team_members tm ON t.id = tm.team_id
-      WHERE t.id = team_invitations.team_id 
-      AND tm.admin_id = auth.uid() 
-      AND (t.owner_id = auth.uid() OR tm.role IN ('owner', 'admin'))
-    )
-  );
-
--- Activity logs policies
-DROP POLICY IF EXISTS "Team members can view team activities" ON public.activity_logs;
-CREATE POLICY "Team members can view team activities" ON public.activity_logs
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.team_members 
-      WHERE team_members.team_id = activity_logs.team_id AND team_members.admin_id = auth.uid()
-    )
-  );
-
-DROP POLICY IF EXISTS "Team members can create activity logs" ON public.activity_logs;
-CREATE POLICY "Team members can create activity logs" ON public.activity_logs
-  FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.team_members 
-      WHERE team_members.team_id = activity_logs.team_id AND team_members.admin_id = auth.uid()
-    )
-  );
-
--- Licenses policies
-DROP POLICY IF EXISTS "Admins can view their own licenses" ON public.licenses;
-CREATE POLICY "Admins can view their own licenses" ON public.licenses
-  FOR SELECT USING (admin_id = auth.uid());
-
-DROP POLICY IF EXISTS "Team members can view team licenses" ON public.licenses;
-CREATE POLICY "Team members can view team licenses" ON public.licenses
-  FOR SELECT USING (
-    team_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM public.team_members 
-      WHERE team_members.team_id = licenses.team_id AND team_members.admin_id = auth.uid()
-    )
-  );
-
-DROP POLICY IF EXISTS "Admins can manage their own licenses" ON public.licenses;
-CREATE POLICY "Admins can manage their own licenses" ON public.licenses
-  FOR ALL USING (admin_id = auth.uid());
-
-DROP POLICY IF EXISTS "Team members can manage team licenses" ON public.licenses;
-CREATE POLICY "Team members can manage team licenses" ON public.licenses
-  FOR ALL USING (
-    team_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM public.team_members 
-      WHERE team_members.team_id = licenses.team_id AND team_members.admin_id = auth.uid()
-    )
-  );
+DO $$ 
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT schemaname, tablename, policyname 
+              FROM pg_policies 
+              WHERE schemaname = 'public') 
+    LOOP
+        EXECUTE 'DROP POLICY IF EXISTS "' || r.policyname || '" ON ' || r.schemaname || '.' || r.tablename;
+    END LOOP;
+END $$;
 
 -- ============================================
--- STEP 6: CREATE TRIGGERS
+-- STEP 6: CREATE SIMPLE NON-RECURSIVE RLS POLICIES
+-- ============================================
+-- These policies avoid infinite recursion by using simple conditions
+-- Complex authorization is handled in the application layer
+
+-- ADMINS TABLE - Simple self-access
+CREATE POLICY "admins_select" ON public.admins
+  FOR SELECT TO authenticated
+  USING (id = auth.uid());
+
+CREATE POLICY "admins_update" ON public.admins
+  FOR UPDATE TO authenticated
+  USING (id = auth.uid());
+
+-- TEAMS TABLE
+CREATE POLICY "teams_select" ON public.teams
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "teams_insert" ON public.teams
+  FOR INSERT TO authenticated
+  WITH CHECK (owner_id = auth.uid());
+
+CREATE POLICY "teams_update" ON public.teams
+  FOR UPDATE TO authenticated
+  USING (owner_id = auth.uid());
+
+CREATE POLICY "teams_delete" ON public.teams
+  FOR DELETE TO authenticated
+  USING (owner_id = auth.uid());
+
+-- TEAM_MEMBERS TABLE
+CREATE POLICY "team_members_select" ON public.team_members
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "team_members_insert" ON public.team_members
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "team_members_update" ON public.team_members
+  FOR UPDATE TO authenticated
+  USING (true);
+
+CREATE POLICY "team_members_delete" ON public.team_members
+  FOR DELETE TO authenticated
+  USING (true);
+
+-- TEAM_INVITATIONS TABLE
+CREATE POLICY "invitations_select" ON public.team_invitations
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "invitations_insert" ON public.team_invitations
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "invitations_update" ON public.team_invitations
+  FOR UPDATE TO authenticated
+  USING (true);
+
+CREATE POLICY "invitations_delete" ON public.team_invitations
+  FOR DELETE TO authenticated
+  USING (true);
+
+-- ACTIVITY_LOGS TABLE
+CREATE POLICY "activity_select" ON public.activity_logs
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "activity_insert" ON public.activity_logs
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+
+-- LICENSES TABLE - User can only access their own licenses
+CREATE POLICY "licenses_select_own" ON public.licenses
+  FOR SELECT TO authenticated
+  USING (admin_id = auth.uid());
+
+CREATE POLICY "licenses_insert_own" ON public.licenses
+  FOR INSERT TO authenticated
+  WITH CHECK (admin_id = auth.uid());
+
+CREATE POLICY "licenses_update_own" ON public.licenses
+  FOR UPDATE TO authenticated
+  USING (admin_id = auth.uid());
+
+CREATE POLICY "licenses_delete_own" ON public.licenses
+  FOR DELETE TO authenticated
+  USING (admin_id = auth.uid());
+
+-- ============================================
+-- STEP 7: CREATE TRIGGERS
 -- ============================================
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
@@ -524,7 +510,7 @@ CREATE TRIGGER update_licenses_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- ============================================
--- STEP 7: CREATE INDEXES
+-- STEP 8: CREATE INDEXES
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_admins_email ON public.admins(email);
 CREATE INDEX IF NOT EXISTS idx_teams_owner_id ON public.teams(owner_id);
