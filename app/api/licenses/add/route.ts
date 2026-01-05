@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify user is an admin
+    // Verify user is an admin and get team info
     const { data: adminData, error: adminError } = await supabase
       .from('admins')
       .select('*')
@@ -39,6 +39,13 @@ export async function POST(request: Request) {
         { status: 403 }
       );
     }
+
+    // Get user's team
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('team_id')
+      .eq('admin_id', user.id)
+      .single();
 
     // Check if license already exists for this email
     const { data: existingLicense } = await supabase
@@ -64,6 +71,8 @@ export async function POST(request: Request) {
         business_name: '', // Will be filled during activation
         business_type: '', // Will be filled during activation
         is_activated: false,
+        team_id: teamMember?.team_id || null,
+        performed_by: user.id,
       })
       .select()
       .single();
@@ -88,6 +97,17 @@ export async function POST(request: Request) {
     if (!emailResult.success) {
       console.error('Failed to send activation email:', emailResult.error);
       // License was created but email failed - still return success with warning
+    }
+
+    // Log activity
+    if (teamMember?.team_id) {
+      await supabase.rpc('log_activity', {
+        p_team_id: teamMember.team_id,
+        p_admin_id: user.id,
+        p_activity_type: 'license_added',
+        p_description: `Added license for ${email.toLowerCase()}`,
+        p_metadata: { license_id: license.id, email: email.toLowerCase() }
+      });
     }
 
     return NextResponse.json(

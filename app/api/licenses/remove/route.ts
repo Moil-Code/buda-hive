@@ -38,6 +38,20 @@ export async function DELETE(request: Request) {
       );
     }
 
+    // Get user's team
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('team_id')
+      .eq('admin_id', user.id)
+      .single();
+
+    // Get license info before deletion for logging
+    const { data: licenseData } = await supabase
+      .from('licenses')
+      .select('email')
+      .eq('id', licenseId)
+      .single();
+
     // Delete the license
     const { error: deleteError } = await supabase
       .from('licenses')
@@ -51,6 +65,17 @@ export async function DELETE(request: Request) {
         { error: 'Failed to delete license' },
         { status: 500 }
       );
+    }
+
+    // Log activity
+    if (teamMember?.team_id && licenseData) {
+      await supabase.rpc('log_activity', {
+        p_team_id: teamMember.team_id,
+        p_admin_id: user.id,
+        p_activity_type: 'license_removed',
+        p_description: `Removed license for ${licenseData.email}`,
+        p_metadata: { license_id: licenseId, email: licenseData.email }
+      });
     }
 
     return NextResponse.json(

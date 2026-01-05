@@ -208,7 +208,7 @@ const AdminSignupPage = () => {
                         <line x1="12" y1="8" x2="12.01" y2="8"></line>
                     </svg>
                     <p className="text-sm text-blue-800 leading-relaxed">
-                        Admin accounts require approval from the Buda EDC. You will receive an email once your account has been verified.
+                        Admin accounts require approval from Moil. You will receive an email once your account has been verified.
                     </p>
                 </div>
               </div>

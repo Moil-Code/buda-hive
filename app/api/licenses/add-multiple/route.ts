@@ -40,6 +40,13 @@ export async function POST(request: Request) {
       );
     }
 
+    // Get user's team
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('team_id')
+      .eq('admin_id', user.id)
+      .single();
+
     const results = {
       success: 0,
       failed: 0,
@@ -83,6 +90,8 @@ export async function POST(request: Request) {
           business_name: '', // Will be filled during activation
           business_type: '', // Will be filled during activation
           is_activated: false,
+          team_id: teamMember?.team_id || null,
+          performed_by: user.id,
         })
         .select()
         .single();
@@ -116,6 +125,20 @@ export async function POST(request: Request) {
         results.emailsFailed++;
         console.error(`Failed to send email to ${trimmedEmail}:`, emailResult.error);
       }
+    }
+
+    // Log activity
+    if (teamMember?.team_id && results.success > 0) {
+      await supabase.rpc('log_activity', {
+        p_team_id: teamMember.team_id,
+        p_admin_id: user.id,
+        p_activity_type: 'license_added',
+        p_description: `Added ${results.success} license${results.success > 1 ? 's' : ''}`,
+        p_metadata: { 
+          count: results.success,
+          emails_sent: results.emailsSent 
+        }
+      });
     }
 
     return NextResponse.json(

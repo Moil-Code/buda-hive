@@ -39,6 +39,13 @@ export async function POST(request: Request) {
       );
     }
 
+    // Get user's team
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('team_id')
+      .eq('admin_id', user.id)
+      .single();
+
     // Get the license
     const { data: license, error: licenseError } = await supabase
       .from('licenses')
@@ -76,6 +83,17 @@ export async function POST(request: Request) {
         { error: 'Failed to send email' },
         { status: 500 }
       );
+    }
+
+    // Log activity
+    if (teamMember?.team_id) {
+      await supabase.rpc('log_activity', {
+        p_team_id: teamMember.team_id,
+        p_admin_id: user.id,
+        p_activity_type: 'license_resend',
+        p_description: `Resent activation email to ${license.email}`,
+        p_metadata: { license_id: license.id, email: license.email }
+      });
     }
 
     return NextResponse.json(

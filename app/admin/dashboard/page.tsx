@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Logo from '@/components/ui/Logo';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import TeamManagement from '@/components/TeamManagement';
+import ActivityPanel from '@/components/ActivityPanel';
 
 interface License {
   id: string;
@@ -49,6 +51,8 @@ const DashboardPage = () => {
   const [useCustomCount, setUseCustomCount] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [adminEmail, setAdminEmail] = useState('');
+  const [showTeamManagement, setShowTeamManagement] = useState(false);
+  const [showActivityPanel, setShowActivityPanel] = useState(false);
 
   useEffect(() => {
     checkAuthAndFetchLicenses();
@@ -453,10 +457,31 @@ const DashboardPage = () => {
             <span className="text-gray-500 font-medium">Admin Dashboard</span>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setShowActivityPanel(true)}
+            className="px-4 py-2.5 border-2 border-gray-200 rounded-lg text-gray-600 font-medium hover:border-buda-blue hover:text-buda-blue hover:bg-blue-50 transition-all duration-300 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Activity
+          </button>
+          <button 
+            onClick={() => setShowTeamManagement(true)}
+            className="px-4 py-2.5 border-2 border-gray-200 rounded-lg text-gray-600 font-medium hover:border-buda-blue hover:text-buda-blue hover:bg-blue-50 transition-all duration-300 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Team
+          </button>
           <button 
             onClick={handleLogout}
-            className="px-5 py-2.5 border-2 border-gray-200 rounded-lg text-gray-600 font-medium hover:border-red-500 hover:text-red-500 hover:bg-red-50 transition-all duration-300 flex items-center gap-2"
+            className="px-4 py-2.5 border-2 border-gray-200 rounded-lg text-gray-600 font-medium hover:border-red-500 hover:text-red-500 hover:bg-red-50 transition-all duration-300 flex items-center gap-2"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -892,6 +917,16 @@ const DashboardPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Team Management Modal */}
+      {showTeamManagement && (
+        <TeamManagement onClose={() => setShowTeamManagement(false)} />
+      )}
+
+      {/* Activity Panel Modal */}
+      {showActivityPanel && (
+        <ActivityPanel onClose={() => setShowActivityPanel(false)} />
       )}
     </div>
   );

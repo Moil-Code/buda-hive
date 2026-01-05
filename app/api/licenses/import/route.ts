@@ -24,6 +24,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
+    // Get user's team
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('team_id')
+      .eq('admin_id', user.id)
+      .single();
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -81,6 +88,8 @@ export async function POST(request: Request) {
           business_name: '',
           business_type: '',
           is_activated: false,
+          team_id: teamMember?.team_id || null,
+          performed_by: user.id,
         })
         .select()
         .single();
@@ -107,6 +116,21 @@ export async function POST(request: Request) {
           console.error(`Failed to send email to ${email}:`, emailResult.error);
         }
       }
+    }
+
+    // Log activity
+    if (teamMember?.team_id && results.success > 0) {
+      await supabase.rpc('log_activity', {
+        p_team_id: teamMember.team_id,
+        p_admin_id: user.id,
+        p_activity_type: 'licenses_imported',
+        p_description: `Imported ${results.success} licenses from CSV`,
+        p_metadata: { 
+          success_count: results.success, 
+          failed_count: results.failed,
+          emails_sent: results.emailsSent 
+        }
+      });
     }
 
     return NextResponse.json({
