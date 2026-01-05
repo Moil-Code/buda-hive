@@ -351,7 +351,7 @@ export default function TeamManagement({ onClose }: TeamManagementProps) {
                       value={newTeamNameInput}
                       onChange={(e) => setNewTeamNameInput(e.target.value)}
                       placeholder="Team name (optional)"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-buda-blue focus:outline-none focus:ring-4 focus:ring-buda-blue/10 transition-all"
+                      className="w-full px-4 py-3 rounded-xl ring-2  ring-buda-blue/60 focus:ring-2 focus:ring-buda-blue/90 text-black transition-all"
                     />
                     <button
                       type="submit"
@@ -382,7 +382,7 @@ export default function TeamManagement({ onClose }: TeamManagementProps) {
                               type="text"
                               value={newTeamName}
                               onChange={(e) => setNewTeamName(e.target.value)}
-                              className="px-3 py-2 text-black rounded-lg focus:ring-4 focus:ring-blue-400/50 text-xl font-bold w-full md:w-auto"
+                              className="px-3 py-2 text-black rounded-lg ring-2 ring-buda-blue/90 focus:ring-2 focus:ring-buda-blue/90 text-xl font-bold w-full md:w-auto"
                               autoFocus
                             />
                             <div className="flex gap-2">

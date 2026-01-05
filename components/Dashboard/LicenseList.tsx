@@ -112,7 +112,7 @@ export function LicenseList({ licenses, loading, onRefresh }: LicenseListProps) 
             <input 
               type="text" 
               placeholder="Search by email..." 
-              className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-buda-blue focus:outline-none focus:ring-4 focus:ring-buda-blue/10 transition-all duration-300 bg-gray-50 focus:bg-white"
+              className="w-full pl-10 text-black pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-buda-blue focus:outline-none focus:ring-2 focus:ring-buda-blue/90 transition-all duration-300 focus:bg-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
