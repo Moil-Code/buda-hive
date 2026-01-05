@@ -29,12 +29,37 @@ export async function GET() {
       );
     }
 
-    // Get all licenses for this admin
-    const { data: licenses, error: licensesError } = await supabase
+    // Get user's team membership and team info
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select(`
+        team_id,
+        team:teams (
+          id,
+          purchased_license_count
+        )
+      `)
+      .eq('admin_id', user.id)
+      .single();
+
+    const teamId = teamMember?.team_id;
+    const team = teamMember?.team as unknown as { id: string; purchased_license_count: number } | null;
+
+    // Get all licenses for the team (or admin if no team)
+    let licensesQuery = supabase
       .from('licenses')
       .select('*')
-      .eq('admin_id', user.id)
       .order('created_at', { ascending: false });
+    
+    if (teamId) {
+      // If user is in a team, get all team licenses
+      licensesQuery = licensesQuery.eq('team_id', teamId);
+    } else {
+      // Fallback to admin-level licenses
+      licensesQuery = licensesQuery.eq('admin_id', user.id);
+    }
+
+    const { data: licenses, error: licensesError } = await licensesQuery;
 
     if (licensesError) {
       console.error('Licenses fetch error:', licensesError);
@@ -45,12 +70,14 @@ export async function GET() {
     }
 
     // Calculate statistics
-    const total = licenses.length;
-    const activated = licenses.filter(l => l.is_activated).length;
-    const pending = total - activated;
+    const assignedLicenses = licenses?.length || 0;
+    const activated = licenses?.filter(l => l.is_activated).length || 0;
+    const pending = assignedLicenses - activated;
+    const purchasedLicenseCount = team?.purchased_license_count || 0;
+    const availableLicenses = purchasedLicenseCount - assignedLicenses;
 
     // Format licenses for response
-    const formattedLicenses = licenses.map(license => ({
+    const formattedLicenses = (licenses || []).map(license => ({
       id: license.id,
       email: license.email,
       isActivated: license.is_activated,
@@ -64,9 +91,13 @@ export async function GET() {
       { 
         licenses: formattedLicenses,
         statistics: {
-          total,
+          purchased: purchasedLicenseCount,
+          assigned: assignedLicenses,
           activated,
           pending,
+          available: availableLicenses,
+          // Legacy fields
+          total: assignedLicenses,
         }
       },
       { status: 200 }

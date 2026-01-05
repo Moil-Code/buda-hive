@@ -31,7 +31,9 @@ export interface TeamInvitationData {
   email: string;
   inviterName: string;
   teamName: string;
+  teamId: string;
   inviteUrl: string;
+  signupUrl: string;
   role: string;
   edc?: EdcEmailInfo;
 }
@@ -110,16 +112,22 @@ export async function sendTeamInvitationEmail(data: TeamInvitationData) {
       throw new Error('RESEND_API environment variable is not configured.');
     }
 
+    // Get EDC info for this email
+    const edcInfo = getEdcInfoForEmail(data.email, data.edc);
+
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.email,
-      subject: `You've been invited to join ${data.teamName} on Buda Hive! 🤝`,
+      subject: `You've been invited to join ${data.teamName} on ${edcInfo.programName}! 🤝`,
       react: TeamInvitationEmail({
         email: data.email,
         inviterName: data.inviterName,
         teamName: data.teamName,
+        teamId: data.teamId,
         inviteUrl: data.inviteUrl,
+        signupUrl: data.signupUrl,
         role: data.role,
+        edc: edcInfo,
       }),
     });
 

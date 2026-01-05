@@ -45,19 +45,41 @@ export async function DELETE(request: Request) {
       .eq('admin_id', user.id)
       .single();
 
-    // Get license info before deletion for logging
+    const teamId = teamMember?.team_id;
+
+    // Get license info before deletion for logging and verification
     const { data: licenseData } = await supabase
       .from('licenses')
-      .select('email')
+      .select('email, team_id, admin_id')
       .eq('id', licenseId)
       .single();
+
+    if (!licenseData) {
+      return NextResponse.json(
+        { error: 'License not found' },
+        { status: 404 }
+      );
+    }
+
+    // Verify user has permission to delete this license
+    // Team members can delete any license in their team
+    // Solo admins can only delete their own licenses
+    const canDelete = teamId 
+      ? licenseData.team_id === teamId 
+      : licenseData.admin_id === user.id;
+
+    if (!canDelete) {
+      return NextResponse.json(
+        { error: 'You do not have permission to delete this license' },
+        { status: 403 }
+      );
+    }
 
     // Delete the license
     const { error: deleteError } = await supabase
       .from('licenses')
       .delete()
-      .eq('id', licenseId)
-      .eq('admin_id', user.id);
+      .eq('id', licenseId);
 
     if (deleteError) {
       console.error('License deletion error:', deleteError);

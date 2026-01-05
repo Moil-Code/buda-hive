@@ -166,11 +166,11 @@ function AcceptInviteContent() {
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-buda-blue rounded-full flex items-center justify-center text-white font-bold text-lg">
-                  {invitation.inviter.first_name[0]}{invitation.inviter.last_name[0]}
+                  {invitation.inviter?.first_name?.[0]}{invitation.inviter?.last_name?.[0]}
                 </div>
                 <div>
                   <p className="text-gray-900 font-semibold">
-                    {invitation.inviter.first_name} {invitation.inviter.last_name}
+                    {invitation.inviter?.first_name} {invitation.inviter?.last_name}
                   </p>
                   <p className="text-gray-600 text-sm">invited you to join</p>
                 </div>

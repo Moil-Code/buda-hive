@@ -139,13 +139,17 @@ export async function POST(request: Request) {
       : 'A team member';
 
     // Send invitation email
-    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invite/accept?token=${invitation.token}`;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const inviteUrl = `${baseUrl}/invite/accept?token=${invitation.token}`;
+    const signupUrl = `${baseUrl}/signup?invite=${invitation.token}&team=${team.id}&teamName=${encodeURIComponent(team.name)}`;
     
     const emailResult = await sendTeamInvitationEmail({
       email: normalizedEmail,
       inviterName,
       teamName: team.name,
+      teamId: team.id,
       inviteUrl,
+      signupUrl,
       role,
     });
 

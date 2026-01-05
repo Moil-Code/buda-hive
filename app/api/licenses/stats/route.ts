@@ -23,29 +23,60 @@ export async function GET() {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    // Get license stats from licenses table
-    const { data: licenses, error: licensesError } = await supabase
+    // Get user's team membership and team info
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select(`
+        team_id,
+        team:teams (
+          id,
+          purchased_license_count
+        )
+      `)
+      .eq('admin_id', user.id)
+      .single();
+
+    const teamId = teamMember?.team_id;
+    const team = teamMember?.team as unknown as { id: string; purchased_license_count: number } | null;
+
+    // Get license stats from licenses table for the team (or admin if no team)
+    let licensesQuery = supabase
       .from('licenses')
-      .select('id, is_activated')
-      .eq('admin_id', user.id);
+      .select('id, is_activated');
+    
+    if (teamId) {
+      // If user is in a team, get all team licenses
+      licensesQuery = licensesQuery.eq('team_id', teamId);
+    } else {
+      // Fallback to admin-level licenses
+      licensesQuery = licensesQuery.eq('admin_id', user.id);
+    }
+
+    const { data: licenses, error: licensesError } = await licensesQuery;
 
     if (licensesError) {
       console.error('License stats fetch error:', licensesError);
       return NextResponse.json({ error: 'Failed to fetch license stats' }, { status: 500 });
     }
 
-    const total = licenses?.length || 0;
+    const assignedLicenses = licenses?.length || 0;
     const activated = licenses?.filter(l => l.is_activated).length || 0;
-    const pending = total - activated;
+    const pending = assignedLicenses - activated;
+    const purchasedLicenseCount = team?.purchased_license_count || 0;
+    const availableLicenses = purchasedLicenseCount - assignedLicenses;
 
     return NextResponse.json({
-      total,
+      // New field names
+      purchased: purchasedLicenseCount,
+      assigned: assignedLicenses,
       activated,
       pending,
+      available: availableLicenses,
       // Legacy field names for backward compatibility
-      purchased_license_count: total,
+      total: assignedLicenses,
+      purchased_license_count: purchasedLicenseCount,
       active_purchased_license_count: activated,
-      available_licenses: pending,
+      available_licenses: availableLicenses,
     }, { status: 200 });
 
   } catch (error) {

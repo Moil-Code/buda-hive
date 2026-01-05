@@ -1,12 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
-const AdminLoginPage = () => {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get redirect URL from query params (for invite acceptance flow)
+  const redirectUrl = searchParams.get('redirect');
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -57,8 +62,12 @@ const AdminLoginPage = () => {
         return;
       }
 
-      // Redirect to dashboard
-      router.push('/admin/dashboard');
+      // Redirect to the specified URL or dashboard
+      if (redirectUrl) {
+        router.push(redirectUrl);
+      } else {
+        router.push('/admin/dashboard');
+      }
     } catch (err) {
       setError('An error occurred. Please try again.');
       setLoading(false);
@@ -205,6 +214,19 @@ const AdminLoginPage = () => {
       </div>
     </div>
   );
-};
+}
 
-export default AdminLoginPage;
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-buda-blue"></div>
+          <p className="mt-4 text-slate-400">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
+  );
+}

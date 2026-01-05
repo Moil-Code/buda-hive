@@ -1,12 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
-const AdminSignupPage = () => {
+function SignupContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get invite parameters from URL
+  const inviteToken = searchParams.get('invite');
+  const teamId = searchParams.get('team');
+  const teamName = searchParams.get('teamName');
+  const redirectUrl = searchParams.get('redirect');
+  
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -15,6 +23,9 @@ const AdminSignupPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Check if this is an invite signup
+  const isInviteSignup = !!inviteToken;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +76,14 @@ const AdminSignupPage = () => {
 
       setSuccess(true);
       setTimeout(() => {
-        router.push('/login');
+        // If this is an invite signup, redirect to accept invite page after login
+        if (inviteToken) {
+          router.push(`/login?redirect=/invite/accept?token=${inviteToken}`);
+        } else if (redirectUrl) {
+          router.push(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
+        } else {
+          router.push('/login');
+        }
       }, 2000);
     } catch (err) {
       setError('An error occurred. Please try again.');
@@ -100,8 +118,31 @@ const AdminSignupPage = () => {
                     <span className="text-2xl font-bold text-white tracking-tight">Buda Hive <span className="text-buda-yellow font-normal">Admin</span></span>
                 </div>
             </Link>
-            <p className="text-slate-400 text-sm">Create your administrative account</p>
+            <p className="text-slate-400 text-sm">
+              {isInviteSignup ? 'Create your account to join the team' : 'Create your administrative account'}
+            </p>
           </div>
+
+          {/* Team Invite Banner */}
+          {isInviteSignup && teamName && (
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 mb-6 text-white animate-slide-in">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-white/80 text-sm">You're joining</p>
+                  <p className="text-xl font-bold">{decodeURIComponent(teamName)}</p>
+                  {teamId && <p className="text-white/60 text-xs font-mono">Team ID: {teamId}</p>}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Signup Card */}
           <div className="bg-white rounded-[24px] p-8 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden animate-slide-in backdrop-blur-sm bg-opacity-95">
@@ -246,6 +287,19 @@ const AdminSignupPage = () => {
       </div>
     </div>
   );
-};
+}
 
-export default AdminSignupPage;
+export default function AdminSignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-buda-blue"></div>
+          <p className="mt-4 text-slate-400">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SignupContent />
+    </Suspense>
+  );
+}

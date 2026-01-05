@@ -24,7 +24,9 @@ interface TeamInvitationEmailProps {
   email: string;
   inviterName: string;
   teamName: string;
+  teamId: string;
   inviteUrl: string;
+  signupUrl: string;
   role: string;
   edc?: EdcInfo;
 }
@@ -42,7 +44,9 @@ export const TeamInvitationEmail = ({
   email,
   inviterName,
   teamName,
+  teamId,
   inviteUrl,
+  signupUrl,
   role,
   edc = defaultEdc,
 }: TeamInvitationEmailProps) => {
@@ -91,10 +95,17 @@ export const TeamInvitationEmail = ({
               As a team member, you'll be able to collaborate on license management, help onboard new users, and contribute to your organization's success on the {edcInfo.programName} platform.
             </Text>
 
+            {/* Team Badge */}
+            <Section style={teamBadge}>
+              <Text style={teamBadgeLabel}>You're joining:</Text>
+              <Text style={teamBadgeName}>{teamName}</Text>
+              <Text style={teamBadgeId}>Team ID: {teamId}</Text>
+            </Section>
+
             {/* CTA Button */}
             <Section style={buttonContainer}>
-              <Button style={dynamicButton} href={inviteUrl}>
-                Accept Invitation
+              <Button style={dynamicButton} href={signupUrl}>
+                Create Account & Join Team
               </Button>
             </Section>
 
@@ -102,8 +113,15 @@ export const TeamInvitationEmail = ({
               Or copy and paste this URL into your browser:
             </Text>
             <Text style={linkText}>
+              <Link href={signupUrl} style={dynamicLink}>
+                {signupUrl}
+              </Link>
+            </Text>
+
+            <Text style={textSmall}>
+              Already have an account?{' '}
               <Link href={inviteUrl} style={dynamicLink}>
-                {inviteUrl}
+                Click here to accept the invitation
               </Link>
             </Text>
 
@@ -228,6 +246,46 @@ const text = {
   fontSize: '16px',
   lineHeight: '1.6',
   margin: '0 0 16px',
+};
+
+const textSmall = {
+  color: '#6b7280',
+  fontSize: '14px',
+  lineHeight: '1.6',
+  margin: '16px 0',
+  textAlign: 'center' as const,
+};
+
+const teamBadge = {
+  backgroundColor: '#f0f9ff',
+  border: '2px solid #0ea5e9',
+  borderRadius: '12px',
+  padding: '20px',
+  margin: '24px 0',
+  textAlign: 'center' as const,
+};
+
+const teamBadgeLabel = {
+  color: '#6b7280',
+  fontSize: '12px',
+  fontWeight: '600',
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.05em',
+  margin: '0 0 8px',
+};
+
+const teamBadgeName = {
+  color: '#0c4a6e',
+  fontSize: '24px',
+  fontWeight: 'bold',
+  margin: '0 0 4px',
+};
+
+const teamBadgeId = {
+  color: '#64748b',
+  fontSize: '12px',
+  fontFamily: 'monospace',
+  margin: '0',
 };
 
 const featureText = {

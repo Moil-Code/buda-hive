@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS public.admins (
   email TEXT UNIQUE NOT NULL,
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
+  purchased_license_count INTEGER DEFAULT 0 NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   CONSTRAINT valid_admin_email CHECK (
@@ -62,6 +63,7 @@ CREATE TABLE IF NOT EXISTS public.teams (
   name TEXT NOT NULL,
   owner_id UUID NOT NULL,
   domain TEXT NOT NULL CHECK (domain IN ('budaedc.com', 'moilapp.com')),
+  purchased_license_count INTEGER DEFAULT 0 NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );

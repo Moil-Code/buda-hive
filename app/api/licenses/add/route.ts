@@ -40,26 +40,59 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get user's team
+    // Get user's team membership and team info
     const { data: teamMember } = await supabase
       .from('team_members')
-      .select('team_id')
+      .select(`
+        team_id,
+        team:teams (
+          id,
+          purchased_license_count
+        )
+      `)
       .eq('admin_id', user.id)
       .single();
 
-    // Check if license already exists for this email
-    const { data: existingLicense } = await supabase
+    const teamId = teamMember?.team_id;
+    const team = teamMember?.team as unknown as { id: string; purchased_license_count: number } | null;
+
+    // Check if license already exists for this email (check team-wide if in a team)
+    let existingLicenseQuery = supabase
       .from('licenses')
       .select('*')
-      .eq('email', email)
-      .eq('admin_id', user.id)
-      .single();
+      .eq('email', email.toLowerCase());
+    
+    if (teamId) {
+      existingLicenseQuery = existingLicenseQuery.eq('team_id', teamId);
+    } else {
+      existingLicenseQuery = existingLicenseQuery.eq('admin_id', user.id);
+    }
+
+    const { data: existingLicense } = await existingLicenseQuery.single();
 
     if (existingLicense) {
       return NextResponse.json(
         { error: 'A license for this email already exists' },
         { status: 400 }
       );
+    }
+
+    // Check if team has available licenses
+    if (teamId && team) {
+      // Count assigned licenses for the team
+      const { count: assignedCount } = await supabase
+        .from('licenses')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', teamId);
+
+      const availableLicenses = (team.purchased_license_count || 0) - (assignedCount || 0);
+      
+      if (availableLicenses <= 0) {
+        return NextResponse.json(
+          { error: 'No available licenses. Please purchase more licenses.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Create new license (business info will be added during activation)
@@ -71,7 +104,7 @@ export async function POST(request: Request) {
         business_name: '', // Will be filled during activation
         business_type: '', // Will be filled during activation
         is_activated: false,
-        team_id: teamMember?.team_id || null,
+        team_id: teamId || null,
         performed_by: user.id,
       })
       .select()
