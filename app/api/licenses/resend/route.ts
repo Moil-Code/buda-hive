@@ -46,17 +46,27 @@ export async function POST(request: Request) {
       .eq('admin_id', user.id)
       .single();
 
-    // Get the license
-    const { data: license, error: licenseError } = await supabase
+    const teamId = teamMember?.team_id;
+
+    // Get the license - team members can resend for any team license
+    let licenseQuery = supabase
       .from('licenses')
       .select('*')
-      .eq('id', licenseId)
-      .eq('admin_id', user.id)
-      .single();
+      .eq('id', licenseId);
+
+    if (teamId) {
+      // If user is in a team, they can resend for any team license
+      licenseQuery = licenseQuery.eq('team_id', teamId);
+    } else {
+      // Solo admin can only resend for their own licenses
+      licenseQuery = licenseQuery.eq('admin_id', user.id);
+    }
+
+    const { data: license, error: licenseError } = await licenseQuery.single();
 
     if (licenseError || !license) {
       return NextResponse.json(
-        { error: 'License not found' },
+        { error: 'License not found or you do not have permission to resend' },
         { status: 404 }
       );
     }

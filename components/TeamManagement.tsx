@@ -78,6 +78,8 @@ export default function TeamManagement({ onClose }: TeamManagementProps) {
         return;
       }
 
+      console.log(data)
+
       setTeamData(data);
       if (data.team) {
         setNewTeamName(data.team.name);
@@ -363,7 +365,7 @@ export default function TeamManagement({ onClose }: TeamManagementProps) {
                           type="text"
                           value={newTeamName}
                           onChange={(e) => setNewTeamName(e.target.value)}
-                          className="px-3 py-2 text-black rounded-lg text-gray-900 text-xl font-bold"
+                          className="px-3 py-2 text-black rounded-lg text-black focus:ring-buda-blue text-xl font-bold"
                           autoFocus
                         />
                         <button
@@ -496,17 +498,24 @@ export default function TeamManagement({ onClose }: TeamManagementProps) {
                   Team Members ({teamData.members.length})
                 </h4>
                 <div className="space-y-3">
-                  {teamData.members.map((member) => (
+                  {teamData.members.map((member) => {
+                    const firstName = member.admin?.first_name || '';
+                    const lastName = member.admin?.last_name || '';
+                    const email = member.admin?.email || 'Unknown';
+                    const initials = firstName && lastName ? `${firstName[0]}${lastName[0]}` : email[0].toUpperCase();
+                    const fullName = firstName && lastName ? `${firstName} ${lastName}` : email;
+                    
+                    return (
                     <div key={member.id} className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-buda-blue rounded-full flex items-center justify-center text-white font-semibold">
-                          {member.admin.first_name[0]}{member.admin.last_name[0]}
+                          {initials}
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">
-                            {member.admin.first_name} {member.admin.last_name}
+                            {fullName}
                           </p>
-                          <p className="text-sm text-gray-600">{member.admin.email}</p>
+                          <p className="text-sm text-gray-600">{email}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -524,7 +533,7 @@ export default function TeamManagement({ onClose }: TeamManagementProps) {
                               <option value="admin">Admin</option>
                             </select>
                             <button
-                              onClick={() => handleRemoveMember(member.id, member.admin.email)}
+                              onClick={() => handleRemoveMember(member.id, email)}
                               className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
                               title="Remove member"
                             >
@@ -537,7 +546,8 @@ export default function TeamManagement({ onClose }: TeamManagementProps) {
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </>

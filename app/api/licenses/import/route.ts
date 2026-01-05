@@ -24,12 +24,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    // Get user's team
+    // Get user's team and team info
     const { data: teamMember } = await supabase
       .from('team_members')
-      .select('team_id')
+      .select(`
+        team_id,
+        team:teams (
+          id,
+          purchased_license_count
+        )
+      `)
       .eq('admin_id', user.id)
       .single();
+
+    const teamId = teamMember?.team_id;
+    const team = teamMember?.team as unknown as { id: string; purchased_license_count: number } | null;
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -44,6 +53,22 @@ export async function POST(request: Request) {
     
     // Skip header row
     const dataLines = lines.slice(1);
+
+    // Check available licenses for team before importing
+    if (teamId && team) {
+      const { count: assignedCount } = await supabase
+        .from('licenses')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', teamId);
+
+      const availableLicenses = (team.purchased_license_count || 0) - (assignedCount || 0);
+      
+      if (dataLines.length > availableLicenses) {
+        return NextResponse.json({
+          error: `Only ${availableLicenses} license(s) available. You're trying to import ${dataLines.length}.`
+        }, { status: 400 });
+      }
+    }
     
     const results = {
       success: 0,
@@ -65,13 +90,19 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // Check if license already exists
-      const { data: existing } = await supabase
+      // Check if license already exists (team-wide if in a team)
+      let existingQuery = supabase
         .from('licenses')
         .select('id')
-        .eq('email', email)
-        .eq('admin_id', user.id)
-        .single();
+        .eq('email', email.toLowerCase());
+
+      if (teamId) {
+        existingQuery = existingQuery.eq('team_id', teamId);
+      } else {
+        existingQuery = existingQuery.eq('admin_id', user.id);
+      }
+
+      const { data: existing } = await existingQuery.single();
 
       if (existing) {
         results.failed++;
@@ -88,7 +119,7 @@ export async function POST(request: Request) {
           business_name: '',
           business_type: '',
           is_activated: false,
-          team_id: teamMember?.team_id || null,
+          team_id: teamId || null,
           performed_by: user.id,
         })
         .select()

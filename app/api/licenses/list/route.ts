@@ -61,6 +61,24 @@ export async function GET() {
 
     const { data: licenses, error: licensesError } = await licensesQuery;
 
+    // Get admin info for licenses to show who added them
+    const adminIds = [...new Set((licenses || []).map(l => l.performed_by || l.admin_id).filter(Boolean))];
+    let adminsMap: Record<string, { id: string; first_name: string; last_name: string; email: string }> = {};
+    
+    if (adminIds.length > 0) {
+      const { data: admins } = await supabase
+        .from('admins')
+        .select('id, first_name, last_name, email')
+        .in('id', adminIds);
+      
+      if (admins) {
+        adminsMap = admins.reduce((acc, admin) => {
+          acc[admin.id] = admin;
+          return acc;
+        }, {} as typeof adminsMap);
+      }
+    }
+
     if (licensesError) {
       console.error('Licenses fetch error:', licensesError);
       return NextResponse.json(
@@ -76,16 +94,25 @@ export async function GET() {
     const purchasedLicenseCount = team?.purchased_license_count || 0;
     const availableLicenses = purchasedLicenseCount - assignedLicenses;
 
-    // Format licenses for response
-    const formattedLicenses = (licenses || []).map(license => ({
-      id: license.id,
-      email: license.email,
-      isActivated: license.is_activated,
-      activatedAt: license.activated_at,
-      createdAt: license.created_at,
-      businessName: license.business_name,
-      businessType: license.business_type,
-    }));
+    // Format licenses for response - include who added the license for team transparency
+    const formattedLicenses = (licenses || []).map(license => {
+      const addedById = license.performed_by || license.admin_id;
+      const addedByAdmin = addedById ? adminsMap[addedById] : null;
+      return {
+        id: license.id,
+        email: license.email,
+        isActivated: license.is_activated,
+        activatedAt: license.activated_at,
+        createdAt: license.created_at,
+        businessName: license.business_name,
+        businessType: license.business_type,
+        addedBy: addedByAdmin ? {
+          id: addedByAdmin.id,
+          name: `${addedByAdmin.first_name} ${addedByAdmin.last_name}`.trim(),
+          email: addedByAdmin.email,
+        } : null,
+      };
+    });
 
     return NextResponse.json(
       { 

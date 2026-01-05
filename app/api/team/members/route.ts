@@ -30,7 +30,7 @@ export async function GET() {
         id,
         role,
         joined_at,
-        admin:admins (
+        admin:admins!team_members_admin_id_fkey (
           id,
           email,
           first_name,
@@ -107,7 +107,7 @@ export async function PATCH(request: Request) {
         id,
         admin_id,
         role,
-        admin:admins (
+        admin:admins!team_members_admin_id_fkey (
           email
         )
       `)
@@ -205,7 +205,7 @@ export async function DELETE(request: Request) {
         id,
         admin_id,
         role,
-        admin:admins (
+        admin:admins!team_members_admin_id_fkey (
           email
         )
       `)

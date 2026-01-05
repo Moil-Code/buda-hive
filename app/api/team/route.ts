@@ -12,16 +12,18 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's team with members
+    // Get user's team membership
     const { data: teamMember, error: teamError } = await supabase
       .from('team_members')
       .select(`
+        team_id,
         role,
         team:teams (
           id,
           name,
           domain,
           owner_id,
+          purchased_license_count,
           created_at
         )
       `)
@@ -30,6 +32,7 @@ export async function GET() {
 
     if (teamError || !teamMember) {
       // Admin exists but is not in a team - this is valid
+      console.log('No team found for user:', user.id, teamError);
       return NextResponse.json({ 
         team: null,
         userRole: null,
@@ -40,32 +43,40 @@ export async function GET() {
       });
     }
 
-    // Get team members
-    const { data: members, error: membersError } = await supabase
+    const teamId = teamMember.team_id;
+    console.log('Fetching members for team:', teamId);
+
+    // Get ALL team members for this team
+    const { data: members, error: membersError, count } = await supabase
       .from('team_members')
       .select(`
         id,
+        team_id,
         role,
         joined_at,
-        admin:admins (
+        admin:admins!team_members_admin_id_fkey (
           id,
           email,
           first_name,
           last_name
         )
-      `)
-      .eq('team_id', (teamMember.team as any).id)
+      `, { count: 'exact' })
+      .eq('team_id', teamId)
       .order('joined_at', { ascending: true });
 
     if (membersError) {
-      console.error('Error fetching members:', membersError);
+      console.error('Error fetching members for team', teamId, ':', membersError);
+      console.error('Full error details:', JSON.stringify(membersError, null, 2));
+    } else {
+      console.log('Found', members?.length || 0, 'members for team', teamId, 'count:', count);
+      console.log('Members data:', JSON.stringify(members, null, 2));
     }
 
     // Get pending invitations
     const { data: invitations, error: invitationsError } = await supabase
       .from('team_invitations')
       .select('*')
-      .eq('team_id', (teamMember.team as any).id)
+      .eq('team_id', teamId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
 
@@ -80,6 +91,11 @@ export async function GET() {
       members: members || [],
       pendingInvitations: invitations || [],
       hasTeam: true,
+      debug: {
+        teamId,
+        membersCount: members?.length || 0,
+        membersError: membersError ? membersError.message : null,
+      }
     });
   } catch (error) {
     console.error('Get team error:', error);

@@ -1,4 +1,4 @@
--- Migration: Add license tracking columns
+-- Migration: Add license tracking columns and update constraints for team collaboration
 -- Run this in Supabase SQL Editor
 
 -- ============================================
@@ -34,7 +34,30 @@ BEGIN
 END $$;
 
 -- ============================================
--- Verify the columns were added
+-- Update unique constraint from admin-level to team-level
+-- This allows team collaboration where any team member can add licenses
+-- ============================================
+DO $$
+BEGIN
+  -- Drop the old admin-level constraint if it exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'unique_license_per_admin' AND table_name = 'licenses'
+  ) THEN
+    ALTER TABLE public.licenses DROP CONSTRAINT unique_license_per_admin;
+  END IF;
+  
+  -- Add the new team-level constraint if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'unique_license_per_team' AND table_name = 'licenses'
+  ) THEN
+    ALTER TABLE public.licenses ADD CONSTRAINT unique_license_per_team UNIQUE (team_id, email);
+  END IF;
+END $$;
+
+-- ============================================
+-- Verify the changes
 -- ============================================
 SELECT 'teams' as table_name, column_name, data_type, column_default 
 FROM information_schema.columns 
@@ -47,3 +70,8 @@ FROM information_schema.columns
 WHERE table_schema = 'public' 
 AND table_name = 'admins'
 AND column_name = 'purchased_license_count';
+
+-- Show constraints on licenses table
+SELECT constraint_name, constraint_type
+FROM information_schema.table_constraints
+WHERE table_name = 'licenses' AND table_schema = 'public';

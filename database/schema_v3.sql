@@ -247,11 +247,13 @@ BEGIN
       FOREIGN KEY (performed_by) REFERENCES public.admins(id) ON DELETE SET NULL;
   END IF;
   
+  -- Note: unique_license_per_admin is deprecated, use unique_license_per_team instead
+  -- This ensures the same email can't have multiple licenses within the same team
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints 
-    WHERE constraint_name = 'unique_license_per_admin' AND table_name = 'licenses'
+    WHERE constraint_name = 'unique_license_per_team' AND table_name = 'licenses'
   ) THEN
-    ALTER TABLE public.licenses ADD CONSTRAINT unique_license_per_admin UNIQUE (admin_id, email);
+    ALTER TABLE public.licenses ADD CONSTRAINT unique_license_per_team UNIQUE (team_id, email);
   END IF;
 END $$;
 
@@ -461,22 +463,54 @@ CREATE POLICY "activity_insert" ON public.activity_logs
   FOR INSERT TO authenticated
   WITH CHECK (true);
 
--- LICENSES TABLE - User can only access their own licenses
-CREATE POLICY "licenses_select_own" ON public.licenses
+-- LICENSES TABLE - Team members can access all team licenses
+CREATE POLICY "licenses_select_team" ON public.licenses
   FOR SELECT TO authenticated
-  USING (admin_id = auth.uid());
+  USING (
+    -- User can see their own licenses
+    admin_id = auth.uid()
+    OR
+    -- User can see licenses in their team
+    team_id IN (
+      SELECT team_id FROM public.team_members WHERE admin_id = auth.uid()
+    )
+  );
 
-CREATE POLICY "licenses_insert_own" ON public.licenses
+CREATE POLICY "licenses_insert_team" ON public.licenses
   FOR INSERT TO authenticated
-  WITH CHECK (admin_id = auth.uid());
+  WITH CHECK (
+    -- User can insert licenses as themselves
+    admin_id = auth.uid()
+    AND
+    -- If team_id is set, user must be in that team
+    (team_id IS NULL OR team_id IN (
+      SELECT team_id FROM public.team_members WHERE admin_id = auth.uid()
+    ))
+  );
 
-CREATE POLICY "licenses_update_own" ON public.licenses
+CREATE POLICY "licenses_update_team" ON public.licenses
   FOR UPDATE TO authenticated
-  USING (admin_id = auth.uid());
+  USING (
+    -- User can update their own licenses
+    admin_id = auth.uid()
+    OR
+    -- User can update licenses in their team
+    team_id IN (
+      SELECT team_id FROM public.team_members WHERE admin_id = auth.uid()
+    )
+  );
 
-CREATE POLICY "licenses_delete_own" ON public.licenses
+CREATE POLICY "licenses_delete_team" ON public.licenses
   FOR DELETE TO authenticated
-  USING (admin_id = auth.uid());
+  USING (
+    -- User can delete their own licenses
+    admin_id = auth.uid()
+    OR
+    -- User can delete licenses in their team
+    team_id IN (
+      SELECT team_id FROM public.team_members WHERE admin_id = auth.uid()
+    )
+  );
 
 -- ============================================
 -- STEP 7: CREATE TRIGGERS

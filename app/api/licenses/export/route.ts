@@ -23,12 +23,28 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    // Fetch all licenses for this admin
-    const { data: licenses, error: licensesError } = await supabase
+    // Get user's team
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('team_id')
+      .eq('admin_id', user.id)
+      .single();
+
+    const teamId = teamMember?.team_id;
+
+    // Fetch all licenses for the team (or admin if no team)
+    let licensesQuery = supabase
       .from('licenses')
       .select('*')
-      .eq('admin_id', user.id)
       .order('created_at', { ascending: false });
+
+    if (teamId) {
+      licensesQuery = licensesQuery.eq('team_id', teamId);
+    } else {
+      licensesQuery = licensesQuery.eq('admin_id', user.id);
+    }
+
+    const { data: licenses, error: licensesError } = await licensesQuery;
 
     if (licensesError) {
       return NextResponse.json({ error: 'Failed to fetch licenses' }, { status: 500 });

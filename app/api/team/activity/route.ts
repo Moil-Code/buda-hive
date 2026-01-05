@@ -44,7 +44,7 @@ export async function GET(request: Request) {
         description,
         metadata,
         created_at,
-        admin:admins (
+        admin:admins!activity_logs_admin_id_fkey (
           id,
           email,
           first_name,
