@@ -106,6 +106,7 @@ export async function GET() {
         createdAt: license.created_at,
         businessName: license.business_name,
         businessType: license.business_type,
+        messageId: license.message_id,
         addedBy: addedByAdmin ? {
           id: addedByAdmin.id,
           name: `${addedByAdmin.first_name} ${addedByAdmin.last_name}`.trim(),

@@ -17,6 +17,7 @@ interface EdcInfo {
   programName: string;
   fullName: string;
   logoInitial: string;
+  logo?: string;
   primaryColor: string;
   supportEmail: string;
   licenseDuration: string;
@@ -35,6 +36,7 @@ const defaultEdc: EdcInfo = {
   programName: 'Buda Hive',
   fullName: 'Buda Economic Development Corporation',
   logoInitial: 'B',
+  logo: 'https://res.cloudinary.com/drlcisipo/image/upload/v1705704261/Website%20images/logo_gox0fw.png',
   primaryColor: '#1e40af',
   supportEmail: 'cs@moilapp.com',
   licenseDuration: '1 year',
@@ -104,10 +106,18 @@ export const LicenseActivationEmail = ({
         <Container style={container}>
           {/* Header */}
           <Section style={dynamicHeader}>
-            <div style={logoContainer}>
-              <div style={logo}>{edcInfo.logoInitial}</div>
-              <Text style={logoText}>{edcInfo.programName}</Text>
-            </div>
+            <table width="100%" cellPadding="0" cellSpacing="0" border={0}>
+              <tr>
+                <td align="center" style={{ padding: '0' }}>
+                  {edcInfo.logo ? (
+                    <img src={edcInfo.logo} alt={edcInfo.programName} style={logoImage} />
+                  ) : (
+                    <div style={logoFallback}>{edcInfo.logoInitial}</div>
+                  )}
+                  <Text style={logoText}>{edcInfo.programName}</Text>
+                </td>
+              </tr>
+            </table>
           </Section>
 
           {/* Main Content */}
@@ -179,22 +189,40 @@ export const LicenseActivationEmail = ({
             {/* Next Steps */}
             <Section style={nextStepsContainer}>
               <Heading style={h2}>🧭 Getting Started (5 Minutes)</Heading>
-              <div style={stepRow}>
-                <div style={stepNumber}>1</div>
-                <Text style={stepContent}>Click the activation link above</Text>
-              </div>
-              <div style={stepRow}>
-                <div style={stepNumber}>2</div>
-                <Text style={stepContent}>Verify your email & Sign in as <strong>{email}</strong></Text>
-              </div>
-              <div style={stepRow}>
-                <div style={stepNumber}>3</div>
-                <Text style={stepContent}>Complete your business profile</Text>
-              </div>
-              <div style={stepRow}>
-                <div style={stepNumber}>4</div>
-                <Text style={stepContent}>Start chatting with your AI Business Coach</Text>
-              </div>
+              <table width="100%" cellPadding="0" cellSpacing="0" border={0}>
+                <tr>
+                  <td style={stepNumberCell}>
+                    <div style={stepNumber}>1</div>
+                  </td>
+                  <td style={stepContentCell}>
+                    <Text style={stepContent}>Click the activation link above</Text>
+                  </td>
+                </tr>
+                <tr>
+                  <td style={stepNumberCell}>
+                    <div style={stepNumber}>2</div>
+                  </td>
+                  <td style={stepContentCell}>
+                    <Text style={stepContent}>Verify your email & Sign in as <strong>{email}</strong></Text>
+                  </td>
+                </tr>
+                <tr>
+                  <td style={stepNumberCell}>
+                    <div style={stepNumber}>3</div>
+                  </td>
+                  <td style={stepContentCell}>
+                    <Text style={stepContent}>Complete your business profile</Text>
+                  </td>
+                </tr>
+                <tr>
+                  <td style={stepNumberCell}>
+                    <div style={stepNumber}>4</div>
+                  </td>
+                  <td style={stepContentCell}>
+                    <Text style={stepContent}>Start chatting with your AI Business Coach</Text>
+                  </td>
+                </tr>
+              </table>
             </Section>
 
             {/* Features */}
@@ -265,33 +293,34 @@ const header = {
   textAlign: 'center' as const,
 };
 
-const logoContainer = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '12px',
+const logoImage = {
+  width: '80px',
+  height: 'auto',
+  display: 'block',
+  margin: '0 auto 12px',
 };
 
-const logo = {
+const logoFallback = {
   width: '48px',
   height: '48px',
   borderRadius: '12px',
   background: 'linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
   color: '#1e40af',
   fontSize: '24px',
-  fontWeight: 'bold',
+  fontWeight: 'bold' as const,
   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+  lineHeight: '48px',
+  textAlign: 'center' as const,
+  margin: '0 auto 12px',
 };
 
 const logoText = {
   fontSize: '24px',
-  fontWeight: 'bold',
+  fontWeight: 'bold' as const,
   color: '#ffffff',
   margin: '0',
   letterSpacing: '-0.025em',
+  textAlign: 'center' as const,
 };
 
 const content = {
@@ -431,10 +460,11 @@ const nextStepsContainer = {
   margin: '32px 0',
 };
 
-const stepRow = {
-  display: 'flex',
-  alignItems: 'flex-start',
-  marginBottom: '16px',
+const stepNumberCell = {
+  width: '36px',
+  verticalAlign: 'top' as const,
+  paddingRight: '12px',
+  paddingBottom: '12px',
 };
 
 const stepNumber = {
@@ -444,13 +474,14 @@ const stepNumber = {
   height: '24px',
   borderRadius: '50%',
   fontSize: '14px',
-  fontWeight: 'bold',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginRight: '12px',
-  flexShrink: 0,
-  marginTop: '2px',
+  fontWeight: 'bold' as const,
+  lineHeight: '24px',
+  textAlign: 'center' as const,
+};
+
+const stepContentCell = {
+  verticalAlign: 'top' as const,
+  paddingBottom: '12px',
 };
 
 const stepContent = {

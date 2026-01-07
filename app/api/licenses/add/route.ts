@@ -127,9 +127,16 @@ export async function POST(request: Request) {
       adminName: `${adminData.first_name} ${adminData.last_name}`,
     });
 
-    if (!emailResult.success) {
+    // Update message_id based on result
+    if (emailResult.success && emailResult.messageId) {
+      await supabase
+        .from('licenses')
+        .update({ 
+          message_id: emailResult.messageId
+        })
+        .eq('id', license.id);
+    } else {
       console.error('Failed to send activation email:', emailResult.error);
-      // License was created but email failed - still return success with warning
     }
 
     // Log activity

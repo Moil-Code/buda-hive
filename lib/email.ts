@@ -143,3 +143,183 @@ export async function sendTeamInvitationEmail(data: TeamInvitationData) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
+
+export interface BatchLicenseActivationData {
+  licenses: Array<{
+    email: string;
+    activationUrl: string;
+    licenseId: string;
+  }>;
+  adminName: string;
+  adminEmail?: string;
+  edc?: EdcEmailInfo;
+}
+
+export async function sendBatchLicenseActivationEmails(data: BatchLicenseActivationData) {
+  try {
+    if (!process.env.RESEND_API) {
+      throw new Error('RESEND_API environment variable is not configured.');
+    }
+
+    if (data.licenses.length === 0) {
+      return { success: true, results: [], sent: 0, failed: 0 };
+    }
+
+    // Get EDC info for this batch
+    const edcInfo = getEdcInfoForEmail(data.adminEmail, data.edc);
+
+    // Use Resend's batch.send API (max 100 emails per batch)
+    const batchSize = 100;
+
+    // Process in batches using functional programming
+    const batches = data.licenses.reduce<typeof data.licenses[]>((acc, license, index) => {
+      const batchIndex = Math.floor(index / batchSize);
+      if (!acc[batchIndex]) acc[batchIndex] = [];
+      acc[batchIndex].push(license);
+      return acc;
+    }, []);
+
+    // Send each batch using resend.batch.send
+    const batchResults = await Promise.all(
+      batches.map(async (batch) => {
+        try {
+          // Prepare batch email data
+          const batchEmails = batch.map(license => ({
+            from: FROM_EMAIL,
+            to: [license.email],
+            subject: `Welcome to ${edcInfo.programName}! 🎉`,
+            react: LicenseActivationEmail({
+              email: license.email,
+              activationUrl: license.activationUrl,
+              adminName: data.adminName,
+              edc: edcInfo,
+            }),
+          }));
+
+          // Send batch
+          const result = await resend.batch.send(batchEmails);
+
+          if (result.error) {
+            // If batch fails, mark all as failed
+            return batch.map(license => ({
+              email: license.email,
+              licenseId: license.licenseId,
+              success: false as const,
+              error: result.error?.message || 'Batch send failed',
+            }));
+          }
+
+          // Map successful results back to licenses
+          // Resend batch.send returns an array of email IDs
+          const batchData = Array.isArray(result.data) ? result.data : [];
+          return batch.map((license, index) => ({
+            email: license.email,
+            licenseId: license.licenseId,
+            success: true as const,
+            messageId: typeof batchData[index] === 'object' && batchData[index] !== null 
+              ? (batchData[index] as any).id 
+              : undefined,
+          }));
+        } catch (error) {
+          // If batch throws error, mark all as failed
+          return batch.map(license => ({
+            email: license.email,
+            licenseId: license.licenseId,
+            success: false as const,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }));
+        }
+      })
+    );
+
+    // Flatten results
+    const flatResults = batchResults.flat();
+    const sent = flatResults.filter(r => r.success).length;
+    const failed = flatResults.filter(r => !r.success).length;
+
+    console.log(`Batch email sending complete: ${sent} sent, ${failed} failed`);
+    return { success: true, results: flatResults, sent, failed };
+  } catch (error) {
+    console.error('Error sending batch license activation emails:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      results: [],
+      sent: 0,
+      failed: data.licenses.length
+    };
+  }
+}
+
+export async function getEmailDeliveryStatus(messageId: string) {
+  try {
+    if (!process.env.RESEND_API) {
+      throw new Error('RESEND_API environment variable is not configured.');
+    }
+
+    const email = await resend.emails.get(messageId);
+    
+    if (email.error) {
+      return { success: false, error: email.error.message, status: 'unknown' };
+    }
+
+    // Get status from last_event field
+    const status = email.data?.last_event || 'sent';
+    return { 
+      success: true, 
+      status: status as string,
+      data: email.data
+    };
+  } catch (error) {
+    console.error('Error getting email delivery status:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      status: 'unknown'
+    };
+  }
+}
+
+export async function getBatchEmailStatuses(messageIds: string[]) {
+  try {
+    if (!process.env.RESEND_API) {
+      throw new Error('RESEND_API environment variable is not configured.');
+    }
+
+    // Fetch status for each message ID in parallel
+    const statusPromises = messageIds.map(async (messageId) => {
+      try {
+        const email = await resend.emails.get(messageId);
+        if (email.error) {
+          return { messageId, status: 'unknown' };
+        }
+        return { 
+          messageId, 
+          status: email.data?.last_event || 'sent' 
+        };
+      } catch (error) {
+        return { messageId, status: 'unknown' };
+      }
+    });
+
+    const results = await Promise.all(statusPromises);
+    
+    // Create a map of messageId to status
+    const statusMap: Record<string, string> = {};
+    results.forEach(({ messageId, status }) => {
+      statusMap[messageId] = status;
+    });
+
+    return { 
+      success: true, 
+      statuses: statusMap
+    };
+  } catch (error) {
+    console.error('Error getting batch email statuses:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      statuses: {}
+    };
+  }
+}

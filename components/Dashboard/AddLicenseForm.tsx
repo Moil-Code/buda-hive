@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Plus, Upload, X, Mail } from 'lucide-react';
+import { Plus, Upload, X, Mail, FileDown } from 'lucide-react';
 import { useToast } from '@/components/ui/toast/use-toast';
 
 interface AddLicenseFormProps {
@@ -279,7 +279,7 @@ export function AddLicenseForm({ availableLicenses, onLicensesAdded }: AddLicens
       {/* CSV Upload */}
       <div className="relative group">
         <div className="absolute inset-0 bg-buda-blue/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-        <div className="relative flex items-center gap-4 p-5 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl group-hover:border-buda-blue/50 transition-colors duration-300">
+        <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4 p-5 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl group-hover:border-buda-blue/50 transition-colors duration-300">
           <input 
             type="file" 
             id="csv-file"
@@ -289,20 +289,31 @@ export function AddLicenseForm({ availableLicenses, onLicensesAdded }: AddLicens
             className="hidden"
             disabled={availableLicenses === 0 || importing}
           />
-          <label 
-            htmlFor="csv-file"
-            className={`px-5 py-2.5 border-2 border-gray-200 bg-white rounded-lg font-medium text-gray-600 transition-all duration-300 flex items-center gap-2 ${
-              availableLicenses === 0 || importing
-                ? 'opacity-50 cursor-not-allowed' 
-                : 'cursor-pointer hover:border-buda-blue hover:text-buda-blue hover:shadow-sm'
-            }`}
-          >
-            <Upload className="w-4 h-4" />
-            Choose CSV File
-          </label>
+          <div className="flex items-center gap-3">
+            <label 
+              htmlFor="csv-file"
+              className={`px-5 py-2.5 border-2 border-gray-200 bg-white rounded-lg font-medium text-gray-600 transition-all duration-300 flex items-center gap-2 ${
+                availableLicenses === 0 || importing
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'cursor-pointer hover:border-buda-blue hover:text-buda-blue hover:shadow-sm'
+              }`}
+            >
+              <Upload className="w-4 h-4" />
+              Choose CSV File
+            </label>
+            <a 
+              href="/sample-licenses.csv"
+              download="license-template.csv"
+              className="px-4 py-2.5 border-2 border-buda-yellow bg-buda-yellow/10 rounded-lg font-medium text-buda-blue transition-all duration-300 flex items-center gap-2 hover:bg-buda-yellow hover:shadow-sm"
+              title="Download CSV template"
+            >
+              <FileDown className="w-4 h-4" />
+              Template
+            </a>
+          </div>
           <div className="flex-1 min-w-0">
             <span className="text-sm text-gray-600 truncate block">
-              {importing ? 'Importing users...' : 'Or upload multiple users via CSV'}
+              {importing ? 'Importing users...' : 'Upload multiple users via CSV or download the template first'}
             </span>
           </div>
           {importing && (

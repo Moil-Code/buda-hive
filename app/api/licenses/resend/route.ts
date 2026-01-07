@@ -87,7 +87,15 @@ export async function POST(request: Request) {
       adminName: `${adminData.first_name} ${adminData.last_name}`,
     });
 
-    if (!emailResult.success) {
+    // Update message_id based on result
+    if (emailResult.success && emailResult.messageId) {
+      await supabase
+        .from('licenses')
+        .update({ 
+          message_id: emailResult.messageId
+        })
+        .eq('id', license.id);
+    } else {
       console.error('Failed to resend activation email:', emailResult.error);
       return NextResponse.json(
         { error: 'Failed to send email' },

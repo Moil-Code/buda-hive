@@ -2,11 +2,14 @@
 
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/ui/toast/use-toast';
 import { Spinner } from '@/components/ui/spinner';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
+
+const MOIL_LOGO_URL = 'https://res.cloudinary.com/drlcisipo/image/upload/v1705704261/Website%20images/logo_gox0fw.png';
 
 function LoginContent() {
   const router = useRouter();
@@ -123,10 +126,14 @@ function LoginContent() {
           <div className="text-center mb-8 animate-slide-in">
             <Link href="/" className="inline-block group">
                 <div className="flex items-center justify-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-buda-blue to-blue-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg group-hover:scale-105 transition-transform">
-                        B
-                    </div>
-                    <span className="text-2xl font-bold text-white tracking-tight">Buda Hive <span className="text-buda-yellow font-normal">Admin</span></span>
+                    <Image
+                      src={MOIL_LOGO_URL}
+                      alt="Moil Logo"
+                      width={150}
+                      height={48}
+                      className="h-12 object-contain group-hover:scale-105 transition-transform"
+                      priority
+                    />
                 </div>
             </Link>
             <p className="text-slate-400 text-sm">Secure access for platform administrators</p>
@@ -193,7 +200,7 @@ function LoginContent() {
                   />
                   <span className="text-gray-600">Remember me</span>
                 </label>
-                <a href="#" className="text-buda-blue hover:text-blue-700 font-medium transition-colors">Forgot password?</a>
+                <Link href="/forgot-password" className="text-buda-blue hover:text-blue-700 font-medium transition-colors">Forgot password?</Link>
               </div>
 
               <button 

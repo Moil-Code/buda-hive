@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { sendLicenseActivationEmail } from '@/lib/email';
+import { sendBatchLicenseActivationEmails } from '@/lib/email';
 
 export async function POST(request: Request) {
   try {
@@ -70,84 +70,98 @@ export async function POST(request: Request) {
       }
     }
     
-    const results = {
-      success: 0,
-      failed: 0,
-      emailsSent: 0,
-      emailsFailed: 0,
-      errors: [] as string[],
-    };
+    // Parse and validate emails using functional programming
+    const parsedEmails = dataLines
+      .map(line => line.split(',').map(field => field.trim())[0])
+      .filter(email => email && email.includes('@'));
 
-    for (const line of dataLines) {
-      const [email] = line.split(',').map(field => field.trim());
-      
-      if (!email) continue;
+    // Check for existing licenses in parallel
+    const existingChecks = await Promise.all(
+      parsedEmails.map(async (email) => {
+        let existingQuery = supabase
+          .from('licenses')
+          .select('id')
+          .eq('email', email.toLowerCase());
 
-      // Validate email
-      if (!email.includes('@')) {
-        results.failed++;
-        results.errors.push(`Invalid email: ${email}`);
-        continue;
-      }
-
-      // Check if license already exists (team-wide if in a team)
-      let existingQuery = supabase
-        .from('licenses')
-        .select('id')
-        .eq('email', email.toLowerCase());
-
-      if (teamId) {
-        existingQuery = existingQuery.eq('team_id', teamId);
-      } else {
-        existingQuery = existingQuery.eq('admin_id', user.id);
-      }
-
-      const { data: existing } = await existingQuery.single();
-
-      if (existing) {
-        results.failed++;
-        results.errors.push(`License already exists for: ${email}`);
-        continue;
-      }
-
-      // Insert license (business info will be added during activation)
-      const { data: license, error: insertError } = await supabase
-        .from('licenses')
-        .insert({
-          email: email.toLowerCase(),
-          admin_id: user.id,
-          business_name: '',
-          business_type: '',
-          is_activated: false,
-          team_id: teamId || null,
-          performed_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        results.failed++;
-        results.errors.push(`Failed to add ${email}: ${insertError.message}`);
-      } else {
-        results.success++;
-        
-        // Send activation email
-        const activationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://business.moilapp.com'}/register?licenseId=${license.id}&ref=budaHive&org=buda-hive`;
-        
-        const emailResult = await sendLicenseActivationEmail({
-          email: license.email,
-          activationUrl,
-          adminName: `${admin.first_name} ${admin.last_name}`,
-        });
-
-        if (emailResult.success) {
-          results.emailsSent++;
+        if (teamId) {
+          existingQuery = existingQuery.eq('team_id', teamId);
         } else {
-          results.emailsFailed++;
-          console.error(`Failed to send email to ${email}:`, emailResult.error);
+          existingQuery = existingQuery.eq('admin_id', user.id);
         }
-      }
+
+        const { data: existing } = await existingQuery.single();
+        return { email, exists: !!existing };
+      })
+    );
+
+    // Filter out existing emails
+    const newEmails = existingChecks
+      .filter(check => !check.exists)
+      .map(check => check.email);
+
+    const existingEmails = existingChecks
+      .filter(check => check.exists)
+      .map(check => check.email);
+
+    // Insert all new licenses in batch
+    const licensesToInsert = newEmails.map(email => ({
+      email: email.toLowerCase(),
+      admin_id: user.id,
+      business_name: '',
+      business_type: '',
+      is_activated: false,
+      team_id: teamId || null,
+      performed_by: user.id,
+    }));
+
+    const { data: insertedLicenses, error: insertError } = await supabase
+      .from('licenses')
+      .insert(licensesToInsert)
+      .select();
+
+    if (insertError) {
+      console.error('Batch insert error:', insertError);
+      return NextResponse.json(
+        { error: `Failed to insert licenses: ${insertError.message}` },
+        { status: 500 }
+      );
     }
+
+    // Prepare batch email data
+    const emailBatch = (insertedLicenses || []).map(license => ({
+      email: license.email,
+      licenseId: license.id,
+      activationUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://business.moilapp.com'}/register?licenseId=${license.id}&ref=budaHive&org=buda-hive`,
+    }));
+
+    // Send batch emails
+    const emailResults = await sendBatchLicenseActivationEmails({
+      licenses: emailBatch,
+      adminName: `${admin.first_name} ${admin.last_name}`,
+      adminEmail: admin.email,
+    });
+
+    // Update message_id for each license based on results
+    await Promise.all(
+      emailResults.results.map(async (result) => {
+        if (result.success && result.messageId) {
+          await supabase
+            .from('licenses')
+            .update({
+              message_id: result.messageId,
+            })
+            .eq('id', result.licenseId);
+        }
+      })
+    );
+
+    const results = {
+      success: insertedLicenses?.length || 0,
+      failed: existingEmails.length + (dataLines.length - parsedEmails.length),
+      emailsSent: emailResults.sent,
+      emailsFailed: emailResults.failed,
+      errors: existingEmails.map(email => `License already exists for: ${email}`),
+    };
 
     // Log activity
     if (teamMember?.team_id && results.success > 0) {

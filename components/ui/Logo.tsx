@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 interface LogoProps {
@@ -7,6 +8,8 @@ interface LogoProps {
   showText?: boolean;
 }
 
+const MOIL_LOGO_URL = 'https://res.cloudinary.com/drlcisipo/image/upload/v1705704261/Website%20images/logo_gox0fw.png';
+
 const Logo: React.FC<LogoProps> = ({ 
   size = 'md', 
   className,
@@ -14,19 +17,19 @@ const Logo: React.FC<LogoProps> = ({
 }) => {
   const sizeClasses = {
     sm: {
-      container: 'w-8 h-8',
-      text: 'text-base',
-      icon: 'text-lg'
+      container: 'h-8',
+      width: 100,
+      height: 32,
     },
     md: {
-      container: 'w-12 h-12',
-      text: 'text-xl',
-      icon: 'text-2xl'
+      container: 'h-10',
+      width: 125,
+      height: 40,
     },
     lg: {
-      container: 'w-16 h-16',
-      text: 'text-2xl',
-      icon: 'text-3xl'
+      container: 'h-14',
+      width: 175,
+      height: 56,
     }
   };
 
@@ -34,20 +37,14 @@ const Logo: React.FC<LogoProps> = ({
 
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      <div 
-        className={cn(
-          sizes.container,
-          'rounded-xl bg-gradient-to-br from-buda-blue to-blue-600 flex items-center justify-center text-white font-bold shadow-lg',
-          sizes.icon
-        )}
-      >
-        B
-      </div>
-      {showText && (
-        <span className={cn('font-bold text-gray-900', sizes.text)}>
-          Buda Hive
-        </span>
-      )}
+      <Image
+        src={MOIL_LOGO_URL}
+        alt="Moil Logo"
+        width={sizes.width}
+        height={sizes.height}
+        className={cn(sizes.container, 'object-contain')}
+        priority
+      />
     </div>
   );
 };

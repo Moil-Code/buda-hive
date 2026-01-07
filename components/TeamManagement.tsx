@@ -351,7 +351,7 @@ export default function TeamManagement({ onClose }: TeamManagementProps) {
                       value={newTeamNameInput}
                       onChange={(e) => setNewTeamNameInput(e.target.value)}
                       placeholder="Team name (optional)"
-                      className="w-full px-4 py-3 rounded-xl ring-2  ring-buda-blue/60 focus:ring-2 focus:ring-buda-blue/90 text-black transition-all"
+                      className="w-full px-4 py-3 rounded-xl ring-2 ring-buda-blue focus:ring-2 focus:ring-buda-blue text-black transition-all"
                     />
                     <button
                       type="submit"
@@ -372,8 +372,8 @@ export default function TeamManagement({ onClose }: TeamManagementProps) {
               {teamData && teamData.hasTeam && teamData.team && (
                 <div className="space-y-8">
                   {/* Team Info */}
-                  <div className="bg-gradient-to-r from-buda-blue to-blue-700 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+                  <div className="bg-buda-blue rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-buda-yellow/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div>
                         {editingName ? (
@@ -382,7 +382,7 @@ export default function TeamManagement({ onClose }: TeamManagementProps) {
                               type="text"
                               value={newTeamName}
                               onChange={(e) => setNewTeamName(e.target.value)}
-                              className="px-3 py-2 text-black rounded-lg ring-2 ring-buda-blue/90 focus:ring-2 focus:ring-buda-blue/90 text-xl font-bold w-full md:w-auto"
+                              className="px-3 py-2 text-black rounded-lg ring-2 ring-buda-blue focus:ring-2 focus:ring-buda-blue text-xl font-bold w-full md:w-auto"
                               autoFocus
                             />
                             <div className="flex gap-2">
@@ -450,14 +450,14 @@ export default function TeamManagement({ onClose }: TeamManagementProps) {
                             value={inviteEmail}
                             onChange={(e) => setInviteEmail(e.target.value)}
                             placeholder={`colleague@${teamData.team!.domain}`}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-4 focus:ring-buda-blue/10 focus:border-buda-blue transition-all"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-buda-blue focus:border-buda-blue transition-all text-black"
                             required
                           />
                         </div>
                         <select
                           value={inviteRole}
                           onChange={(e) => setInviteRole(e.target.value as 'admin' | 'member')}
-                          className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-4 focus:ring-buda-blue/10 focus:border-buda-blue transition-all bg-white"
+                          className="px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-buda-blue focus:border-buda-blue transition-all bg-white text-black"
                         >
                           <option value="member">Member</option>
                           <option value="admin">Admin</option>
@@ -537,7 +537,7 @@ export default function TeamManagement({ onClose }: TeamManagementProps) {
                         return (
                         <div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:border-buda-blue/30 hover:shadow-sm transition-all duration-200 gap-4">
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-gradient-to-br from-buda-blue to-blue-600 rounded-full flex items-center justify-center text-white font-semibold shadow-sm shrink-0">
+                            <div className="w-10 h-10 bg-buda-blue rounded-full flex items-center justify-center text-white font-semibold shadow-sm shrink-0">
                               {initials}
                             </div>
                             <div>
@@ -556,7 +556,7 @@ export default function TeamManagement({ onClose }: TeamManagementProps) {
                                 <select
                                   value={member.role}
                                   onChange={(e) => handleUpdateRole(member.id, e.target.value)}
-                                  className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-buda-blue focus:outline-none focus:ring-2 focus:ring-buda-blue/20 bg-gray-50"
+                                  className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-buda-blue focus:outline-none focus:ring-2 focus:ring-buda-blue bg-gray-50 text-black"
                                 >
                                   <option value="member">Member</option>
                                   <option value="admin">Admin</option>

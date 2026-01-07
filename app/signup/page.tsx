@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/ui/toast/use-toast';
 import { Spinner } from '@/components/ui/spinner';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, User, ArrowLeft, CheckCircle, Shield } from 'lucide-react';
+
+const MOIL_LOGO_URL = 'https://res.cloudinary.com/drlcisipo/image/upload/v1705704261/Website%20images/logo_gox0fw.png';
 
 function SignupContent() {
   const router = useRouter();
@@ -138,10 +141,14 @@ function SignupContent() {
           <div className="text-center mb-8 animate-slide-in">
             <Link href="/" className="inline-block group">
                 <div className="flex items-center justify-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-buda-blue to-blue-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg group-hover:scale-105 transition-transform">
-                        B
-                    </div>
-                    <span className="text-2xl font-bold text-white tracking-tight">Buda Hive <span className="text-buda-yellow font-normal">Admin</span></span>
+                    <Image
+                      src={MOIL_LOGO_URL}
+                      alt="Moil Logo"
+                      width={150}
+                      height={48}
+                      className="h-12 object-contain group-hover:scale-105 transition-transform"
+                      priority
+                    />
                 </div>
             </Link>
             <p className="text-slate-400 text-sm">
