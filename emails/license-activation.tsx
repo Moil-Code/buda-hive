@@ -36,7 +36,7 @@ const defaultEdc: EdcInfo = {
   programName: 'Buda Hive',
   fullName: 'Buda Economic Development Corporation',
   logoInitial: 'B',
-  logo: 'https://res.cloudinary.com/drlcisipo/image/upload/v1705704261/Website%20images/logo_gox0fw.png',
+  logo: 'https://business.moilapp.com/Buda_Hive_Primary_Logo_BlueYellow_CMYK.png',
   primaryColor: '#1e40af',
   supportEmail: 'cs@moilapp.com',
   licenseDuration: '1 year',

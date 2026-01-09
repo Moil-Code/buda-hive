@@ -141,7 +141,7 @@ export async function POST(request: Request) {
       adminEmail: admin.email,
     });
 
-    // Update message_id for each license based on results
+    // Update message_id and email_status for each license based on results
     await Promise.all(
       emailResults.results.map(async (result) => {
         if (result.success && result.messageId) {
@@ -149,6 +149,14 @@ export async function POST(request: Request) {
             .from('licenses')
             .update({
               message_id: result.messageId,
+              email_status: 'sent',
+            })
+            .eq('id', result.licenseId);
+        } else {
+          await supabase
+            .from('licenses')
+            .update({
+              email_status: 'failed',
             })
             .eq('id', result.licenseId);
         }

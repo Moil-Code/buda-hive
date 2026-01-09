@@ -8,7 +8,7 @@ interface LogoProps {
   showText?: boolean;
 }
 
-const MOIL_LOGO_URL = 'https://res.cloudinary.com/drlcisipo/image/upload/v1705704261/Website%20images/logo_gox0fw.png';
+const BUDA_HIVE_LOGO_URL = '/Buda_Hive_Primary_Logo_BlueYellow_CMYK.png';
 
 const Logo: React.FC<LogoProps> = ({ 
   size = 'md', 
@@ -38,8 +38,8 @@ const Logo: React.FC<LogoProps> = ({
   return (
     <div className={cn('flex items-center gap-3', className)}>
       <Image
-        src={MOIL_LOGO_URL}
-        alt="Moil Logo"
+        src={BUDA_HIVE_LOGO_URL}
+        alt="Buda Hive Logo"
         width={sizes.width}
         height={sizes.height}
         className={cn(sizes.container, 'object-contain')}

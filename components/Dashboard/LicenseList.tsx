@@ -12,6 +12,7 @@ interface License {
   businessName?: string;
   businessType?: string;
   messageId?: string | null;
+  emailStatus?: string | null;
 }
 
 interface LicenseListProps {
@@ -22,45 +23,41 @@ interface LicenseListProps {
 
 export function LicenseList({ licenses, loading, onRefresh }: LicenseListProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [emailStatuses, setEmailStatuses] = useState<Record<string, string>>({});
-  const [fetchingStatuses, setFetchingStatuses] = useState(false);
   const [editingLicenseId, setEditingLicenseId] = useState<string | null>(null);
   const [editingEmail, setEditingEmail] = useState('');
   const [updatingEmail, setUpdatingEmail] = useState(false);
+  const [syncingStatuses, setSyncingStatuses] = useState(false);
   const { toast } = useToast();
 
-  // Fetch email statuses from Resend
+  // Sync email statuses from Resend to database on component mount
   useEffect(() => {
-    const fetchEmailStatuses = async () => {
-      const messageIds = licenses
-        .filter(license => license.messageId)
-        .map(license => license.messageId!);
+    const syncEmailStatuses = async () => {
+      // Only sync if there are licenses with message IDs
+      const hasMessageIds = licenses.some(license => license.messageId);
+      if (!hasMessageIds || loading) return;
 
-      if (messageIds.length === 0) return;
-
-      setFetchingStatuses(true);
+      setSyncingStatuses(true);
       try {
         const response = await fetch('/api/licenses/email-status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messageIds }),
         });
 
         if (response.ok) {
           const data = await response.json();
-          setEmailStatuses(data.statuses);
+          console.log(`Synced ${data.synced} email statuses from Resend`);
+          // Refresh the license list to show updated statuses
+          onRefresh();
         }
       } catch (error) {
-        console.error('Failed to fetch email statuses:', error);
+        console.error('Failed to sync email statuses:', error);
       } finally {
-        setFetchingStatuses(false);
+        setSyncingStatuses(false);
       }
     };
 
-    if (licenses.length > 0 && !loading) {
-      fetchEmailStatuses();
-    }
-  }, [licenses, loading]);
+    syncEmailStatuses();
+  }, [licenses.length, loading]); // Only run when licenses count changes or loading state changes
 
   const filteredLicenses = licenses.filter(license =>
     license.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -130,6 +127,40 @@ export function LicenseList({ licenses, loading, onRefresh }: LicenseListProps) 
       });
     } finally {
       setUpdatingEmail(false);
+    }
+  };
+
+  const handleSyncStatuses = async () => {
+    setSyncingStatuses(true);
+    try {
+      const response = await fetch('/api/licenses/email-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: "Success",
+          description: `Synced ${data.synced} email statuses from Resend`,
+          type: "success"
+        });
+        onRefresh();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to sync email statuses",
+          type: "error"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sync email statuses",
+        type: "error"
+      });
+    } finally {
+      setSyncingStatuses(false);
     }
   };
 
@@ -204,24 +235,35 @@ export function LicenseList({ licenses, loading, onRefresh }: LicenseListProps) 
       </div>
 
       <div className="p-6 md:p-8">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-          <div className="relative w-full md:w-80 group">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-buda-blue transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Search by email..." 
-              className="w-full pl-10 text-black pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-buda-blue focus:outline-none focus:ring-2 focus:ring-buda-blue/90 transition-all duration-300 focus:bg-white"
+        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
+          <div className="relative flex-1 w-full md:max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by email..."
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-buda-blue focus:border-transparent transition-all duration-200"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button 
-            onClick={handleCsvExport}
-            className="w-full md:w-auto px-5 py-2.5 bg-buda-yellow text-buda-blue rounded-lg font-semibold hover:bg-yellow-400 transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-0.5 hover:shadow-sm"
-          >
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
+          <div className="flex gap-3 w-full md:w-auto">
+            <button 
+              onClick={handleSyncStatuses}
+              disabled={syncingStatuses}
+              className="flex-1 md:flex-initial px-5 py-2.5 bg-white border-2 border-buda-blue text-buda-blue rounded-lg font-semibold hover:bg-blue-50 transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-0.5 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Sync email statuses from Resend"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncingStatuses ? 'animate-spin' : ''}`} />
+              {syncingStatuses ? 'Syncing...' : 'Sync Status'}
+            </button>
+            <button 
+              onClick={handleCsvExport}
+              className="flex-1 md:flex-initial px-5 py-2.5 bg-buda-yellow text-buda-blue rounded-lg font-semibold hover:bg-yellow-400 transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-0.5 hover:shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -319,37 +361,28 @@ export function LicenseList({ licenses, loading, onRefresh }: LicenseListProps) 
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {license.messageId ? (
-                        <span 
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold capitalize border ${
-                            emailStatuses[license.messageId] === 'delivered' || emailStatuses[license.messageId] === 'opened'
-                              ? 'bg-green-50 text-green-700 border-green-200' 
-                              : emailStatuses[license.messageId] === 'bounced' || emailStatuses[license.messageId] === 'complained'
-                              ? 'bg-red-50 text-red-700 border-red-200'
-                              : emailStatuses[license.messageId] === 'sent'
-                              ? 'bg-blue-50 text-blue-700 border-blue-200'
-                              : 'bg-gray-50 text-gray-700 border-gray-200'
-                          }`}
-                        >
-                          {fetchingStatuses ? (
-                            <Spinner size="sm" className="w-3 h-3" />
-                          ) : emailStatuses[license.messageId] === 'delivered' || emailStatuses[license.messageId] === 'opened' ? (
-                            <CheckCircle className="w-3 h-3" />
-                          ) : emailStatuses[license.messageId] === 'bounced' || emailStatuses[license.messageId] === 'complained' ? (
-                            <AlertCircle className="w-3 h-3" />
-                          ) : emailStatuses[license.messageId] === 'sent' ? (
-                            <Send className="w-3 h-3" />
-                          ) : (
-                            <Mail className="w-3 h-3" />
-                          )}
-                          {emailStatuses[license.messageId] || 'pending'}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold capitalize border bg-gray-50 text-gray-700 border-gray-200">
+                      <span 
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold capitalize border ${
+                          license.emailStatus === 'delivered' || license.emailStatus === 'opened'
+                            ? 'bg-green-50 text-green-700 border-green-200' 
+                            : license.emailStatus === 'bounced' || license.emailStatus === 'complained' || license.emailStatus === 'failed'
+                            ? 'bg-red-50 text-red-700 border-red-200'
+                            : license.emailStatus === 'sent'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : 'bg-gray-50 text-gray-700 border-gray-200'
+                        }`}
+                      >
+                        {license.emailStatus === 'delivered' || license.emailStatus === 'opened' ? (
+                          <CheckCircle className="w-3 h-3" />
+                        ) : license.emailStatus === 'bounced' || license.emailStatus === 'complained' || license.emailStatus === 'failed' ? (
+                          <AlertCircle className="w-3 h-3" />
+                        ) : license.emailStatus === 'sent' ? (
+                          <Send className="w-3 h-3" />
+                        ) : (
                           <Mail className="w-3 h-3" />
-                          pending
-                        </span>
-                      )}
+                        )}
+                        {license.emailStatus || 'pending'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{formatDate(license.createdAt)}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">

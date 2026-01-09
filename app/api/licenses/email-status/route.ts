@@ -24,29 +24,76 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const { messageIds } = await request.json();
+    // Get user's team
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('team_id')
+      .eq('admin_id', user.id)
+      .single();
 
-    if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
-      return NextResponse.json({ error: 'Message IDs required' }, { status: 400 });
+    const teamId = teamMember?.team_id;
+
+    // Get all licenses with message_ids that need status updates
+    let licensesQuery = supabase
+      .from('licenses')
+      .select('id, message_id')
+      .not('message_id', 'is', null);
+
+    if (teamId) {
+      licensesQuery = licensesQuery.eq('team_id', teamId);
+    } else {
+      licensesQuery = licensesQuery.eq('admin_id', user.id);
     }
 
-    // Fetch email statuses from Resend
-    const result = await getBatchEmailStatuses(messageIds);
+    const { data: licenses } = await licensesQuery;
 
-    if (!result.success) {
+    if (!licenses || licenses.length === 0) {
       return NextResponse.json(
-        { error: result.error || 'Failed to fetch email statuses' },
+        { message: 'No licenses with message IDs found', synced: 0 },
+        { status: 200 }
+      );
+    }
+
+    // Extract message IDs
+    const messageIds = licenses.map(license => license.message_id!);
+
+    // Fetch email statuses from Resend
+    const statusResult = await getBatchEmailStatuses(messageIds);
+
+    if (!statusResult.success) {
+      console.error('Failed to fetch email statuses:', statusResult.error);
+      return NextResponse.json(
+        { error: 'Failed to fetch email statuses from Resend' },
         { status: 500 }
       );
     }
 
+    const statuses = statusResult.statuses as Record<string, string>;
+
+    // Update database with fetched statuses
+    const updatePromises = licenses.map(async (license) => {
+      const messageId = license.message_id!;
+      const status = statuses[messageId];
+      if (status) {
+        await supabase
+          .from('licenses')
+          .update({ email_status: status })
+          .eq('id', license.id);
+      }
+    });
+
+    await Promise.all(updatePromises);
+
     return NextResponse.json(
-      { statuses: result.statuses },
+      { 
+        message: 'Email statuses synced successfully',
+        synced: licenses.length,
+        statuses 
+      },
       { status: 200 }
     );
-
   } catch (error) {
-    console.error('Email status fetch error:', error);
+    console.error('Sync email statuses error:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred' },
       { status: 500 }

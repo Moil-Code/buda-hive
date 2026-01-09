@@ -14,10 +14,10 @@ export async function POST(request: Request) {
 
     const { name } = await request.json();
 
-    // Get admin info
+    // Get admin info including purchased_license_count
     const { data: adminData, error: adminError } = await supabase
       .from('admins')
-      .select('email, first_name, last_name')
+      .select('email, first_name, last_name, purchased_license_count')
       .eq('id', user.id)
       .single();
 
@@ -83,12 +83,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to set up team' }, { status: 500 });
     }
 
-    // Update existing licenses to belong to this team
+    // Transfer admin's purchased_license_count to team
+    const adminPurchasedCount = adminData.purchased_license_count || 0;
+    
+    if (adminPurchasedCount > 0) {
+      await supabase
+        .from('teams')
+        .update({ purchased_license_count: adminPurchasedCount })
+        .eq('id', team.id);
+    }
+
+    // Migrate all existing solo admin licenses to the team
     await supabase
       .from('licenses')
       .update({ team_id: team.id, performed_by: user.id })
       .eq('admin_id', user.id)
       .is('team_id', null);
+
+    // Reset admin's purchased_license_count to 0 since licenses are now managed by team
+    await supabase
+      .from('admins')
+      .update({ purchased_license_count: 0 })
+      .eq('id', user.id);
 
     // Log activity
     await supabase.rpc('log_activity', {

@@ -127,16 +127,23 @@ export async function POST(request: Request) {
       adminName: `${adminData.first_name} ${adminData.last_name}`,
     });
 
-    // Update message_id based on result
+    // Update message_id and email_status based on result
     if (emailResult.success && emailResult.messageId) {
       await supabase
         .from('licenses')
         .update({ 
-          message_id: emailResult.messageId
+          message_id: emailResult.messageId,
+          email_status: 'sent'
         })
         .eq('id', license.id);
     } else {
       console.error('Failed to send activation email:', emailResult.error);
+      await supabase
+        .from('licenses')
+        .update({ 
+          email_status: 'failed'
+        })
+        .eq('id', license.id);
     }
 
     // Log activity

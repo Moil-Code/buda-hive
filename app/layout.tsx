@@ -14,8 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Moil License Management - Partner Platform",
-  description: "Official license management platform for Moil partners",
+  title: "Buda Hive - Business License Management",
+  description: "Buda Economic Development Corporation's official business license management platform powered by Moil",
+  icons: {
+    icon: "/Buda_Hive_Primary_Logo_BlueYellow_CMYK.png",
+    apple: "/Buda_Hive_Primary_Logo_BlueYellow_CMYK.png",
+  },
 };
 
 export default function RootLayout({

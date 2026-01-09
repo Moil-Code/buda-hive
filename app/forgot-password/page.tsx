@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/toast/use-toast';
 import { Spinner } from '@/components/ui/spinner';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 
-const MOIL_LOGO_URL = 'https://res.cloudinary.com/drlcisipo/image/upload/v1705704261/Website%20images/logo_gox0fw.png';
+const BUDA_HIVE_LOGO_URL = '/Buda_Hive_Primary_Logo_BlueYellow_CMYK.png';
 
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
@@ -82,8 +82,8 @@ export default function ForgotPasswordPage() {
             <Link href="/login" className="inline-block group">
               <div className="flex items-center justify-center gap-3 mb-4">
                 <Image
-                  src={MOIL_LOGO_URL}
-                  alt="Moil Logo"
+                  src={BUDA_HIVE_LOGO_URL}
+                  alt="Buda Hive Logo"
                   width={150}
                   height={48}
                   className="h-12 object-contain group-hover:scale-105 transition-transform"
